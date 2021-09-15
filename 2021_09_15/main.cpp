@@ -1,3 +1,11 @@
+/**
+      ---------------------------------------------------
+      |         Made by Shamal Viktor (@j3uktop)        |
+      |           2019-2021 - Lyceum BSU - IM           |
+      |             2021 - BSUIR - FCP - PMS            |
+      |          *** All rights reserved ***            |
+      ---------------------------------------------------
+                                            			**/
 #include <iostream>
 
 using namespace std;
@@ -90,7 +98,7 @@ void chinese() {
     int chin_year_num, chin_year_color;
     cin >> chin_year_num;
     if (chin_year_num < 0) {
-        cout << chin_year_num % 10 << '\n';
+//        cout << chin_year_num % 10 << '\n';
         chin_year_color = (chin_year_num - 10 * (chin_year_num / 10 - 1)) % 10 / 2;
         chin_year_num += -12 * (chin_year_num / 12 - 1);
     } else {
