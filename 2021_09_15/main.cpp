@@ -24,6 +24,7 @@ void f1(int &x) {
 
 void f2(int &x) {
     int sum = 0, k = 0;
+    x = abs(x);
     while (x) {
         sum += x % 10;
         x /= 10;
@@ -116,10 +117,10 @@ void chinese() {
 
 int main() {
     int x;
-//    f1(x);
-//    f2(x);
+    f1(x);
+    f2(x);
 //    f3();
-    chinese();
+//    chinese();
     system("pause");
     return 0;
 }
