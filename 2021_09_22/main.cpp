@@ -33,7 +33,9 @@ void task1() {
     cout << "b = ";
     cin >> b;
     int S = a * b;
+    int P = (a + b) * 2;
     cout << "S = " << S << '\n';
+    cout << "P = " << P << '\n';
     draw_rectangle(a, b);
     cout << "\nTask 1 is completed\n\n";
 }
