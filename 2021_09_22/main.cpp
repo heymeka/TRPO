@@ -27,7 +27,7 @@ void draw_rectangle(int a, int b) {
 void task1() {
     int a, b;
     cout << "Task 1:\n";
-    cout << "Set rectangle\n";
+    cout << "Set rectangle (a, b > 0)\n";
     cout << "a = ";
     cin >> a;
     cout << "b = ";
@@ -49,7 +49,7 @@ void task2() {
     int n;
     cout << "Task 2:\n";
     cout << "n = ";
-    cout << "First n fibonacci numbers:\n";
+    cout << "First n (>= 0) fibonacci numbers:\n";
     cin >> n;
     int first_ = 1, second_ = 0, buf;
     for(int i = 0; i < n; i++) {
@@ -65,7 +65,14 @@ void task2() {
 }
 
 ll get_gcd(ll a, ll b) {
-    return (a > 0) ? get_gcd(b % a, a) : b;
+    //return (a > 0) ? get_gcd(b % a, a) : b;
+    ll buf;
+    while(a > 0) {
+        buf = a;
+        a = b % a;
+        b = buf;
+    }
+    return b;
 }
 
 bool is_prime(ll n) {
@@ -77,7 +84,7 @@ bool is_prime(ll n) {
 
 void task3() {
     cout << "Task 3:\n";
-    cout << "Find GCD\n";
+    cout << "Find GCD (a >= 0, b >= 0)\n";
     ll a, b;
     cout << "a = ";
     cin >> a;
@@ -101,7 +108,7 @@ void task3() {
 
 void task4() {
     cout << "Task 4:\n";
-    cout << "Get binary representation\n";
+    cout << "Get binary representation (n > 0)\n";
     cout << "n = ";
     int n;
     cin >> n;
@@ -121,17 +128,24 @@ ll get_rand(ll mod) {
 }
 
 void task5() {
-    cout << "Get the mod for random numbers\n";
+    cout << "Get the mod (> 0) for random numbers\n";
     ll mod;
     cout << "mod = ";
     cin >> mod;
+    mod = abs(mod);
     if(mod > 1e7) {
         cout << "mod is too large.\nmod = " << 1e7;
         mod = 1e7;
     }
+    if(mod == 0){
+        cout << "mid can't be 0.\nmod = 2\n";
+        mod = 2;
+    }
     cout << "How many numbers generate?\n";
     ll cnt;
+    cout << "count = ";
     cin >> cnt;
+    cnt = abs(cnt);
     if(cnt > 1e8) {
         cout << "So many numbers, will be generate " << 1e8 << " numbers\n";
         cnt = 1e8;
