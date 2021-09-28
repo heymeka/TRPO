@@ -9,8 +9,6 @@
 #include <iostream>
 #include <fstream>
 #include <algorithm>
-#include <iomanip>
-#include <Windows.h>
 #include <conio.h>
 #include <time.h>
 
