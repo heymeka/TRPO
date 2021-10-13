@@ -8,6 +8,7 @@
                                             			**/
 #include <iostream>
 #include <iomanip>
+#include <conio.h>
 #include <ctime>
 using std::cout;
 using std::cin;
@@ -43,11 +44,24 @@ void taskSum();
 
 void taskMultiply();
 
+void taskDelete();
+
+void taskMatrixMedian();
+
+template<typename T>
+T max(T first, T second) {
+  if (first < second)
+    first = second;
+  return first;
+}
+
 int main() {
   srand(time(NULL));
-  taskPrint();
-  taskSum();
-  taskMultiply();
+  // taskPrint();
+  // taskSum();
+  // taskMultiply();
+  // taskDelete();
+  // taskMatrixMedian();
   system("pause");
   return 0;
 }
@@ -63,7 +77,56 @@ void taskPrint() {
 }
 
 void taskSum() {
-  cout << "Task2: Get the sum and average value of the elements in the array\n";
+  cout
+      << "Task2: Get the sum and average value of the elements in the array\n\n";
+  cout << "Enter element count\n";
+  int size;
+  cout << "size = ";
+  cin >> size;
+  while (size < 1) {
+    cout << "Input error. Size must be > 0\n";
+    cout << "size = ";
+    cin >> size;
+  }
+  double* value = new double[size];
+  cout << "Generate random elements? [Y/N]: ";
+  char user_answer = getche();
+  cout << "\n";
+  if (user_answer == 'Y' || user_answer == 'y') {
+    double interval_start;
+    double interval_finish;
+    cout << "Enter the number generation interval\n";
+    cout << "Min value = ";
+    cin >> interval_start;
+    cout << "Max value = ";
+    cin >> interval_finish;
+
+    int mod = abs(interval_start - interval_finish) + 1;
+    mod = max(2, mod);
+    cout << "Interval: " << interval_start << ".."
+         << int(interval_start) + mod - 1 << '\n';
+
+    for (int ind = 0; ind < size; ind++) {
+      ind[value] = rand() % mod + interval_start;
+    }
+    cout << "Array:\n";
+    for (int ind = 0; ind < size; ind++) {
+      cout << ind[value] << ' ';
+    }
+    cout << '\n';
+  } else {
+    cout << "Enter " << size << " elements\n";
+    for (int ind = 0; ind < size; ind++) {
+      cin >> ind[value];
+    }
+  }
+  int sum = 0;
+  for (int ind = 0; ind < size; ind++) {
+    sum += ind[value];
+  }
+  cout << "Sum = " << sum << '\n';
+  double average = double(sum) / size;
+  cout << "Average = " << average << '\n';
 
   cout << "\n\n";
 }
@@ -90,6 +153,14 @@ void taskMultiply() {
   matr2.erase();
   matr3.erase();
   cout << "\n\n";
+}
+
+void taskDelete() {
+
+}
+
+void taskMatrixMedian() {
+
 }
 
 void matrix::init() {
