@@ -7,6 +7,7 @@
       ---------------------------------------------------
                                             			**/
 #include <iostream>
+#include <algorithm>
 #include <iomanip>
 #include <conio.h>
 #include <ctime>
@@ -17,7 +18,7 @@ const int SPACE = 5;
 
 class matrix {
  private:
-  int** values;
+  double** values;
   int row;
   int col;
  public:
@@ -32,13 +33,13 @@ class matrix {
   matrix operator*(matrix& matr2);
 };
 
-double getSum(int* array, int& array_size);
+void deleteDuplicateItems(double* array, int& array_size);
 
-void deleteDuplicateItems(int* array, int& array_size);
-
-double getMedium(int* array, int& array_size);
+double getMediumValue(double* array, int& array_size);
 
 void taskPrint();
+
+double* getArray(int& array_size);
 
 void taskSum();
 
@@ -76,19 +77,16 @@ void taskPrint() {
   cout << "\n\n";
 }
 
-void taskSum() {
-  cout
-      << "Task2: Get the sum and average value of the elements in the array\n\n";
-  cout << "Enter element count\n";
-  int size;
+double* getArray(int& array_size) {
+  cout << "Enter array size\n";
   cout << "size = ";
-  cin >> size;
-  while (size < 1) {
+  cin >> array_size;
+  while (array_size < 1) {
     cout << "Input error. Size must be > 0\n";
     cout << "size = ";
-    cin >> size;
+    cin >> array_size;
   }
-  double* value = new double[size];
+  double* array = new double[array_size];
   cout << "Generate random elements? [Y/N]: ";
   char user_answer = getche();
   cout << "\n";
@@ -101,34 +99,45 @@ void taskSum() {
     cout << "Max value = ";
     cin >> interval_finish;
 
-    int mod = abs(interval_start - interval_finish) + 1;
+    int mod = std::abs(interval_start - interval_finish) + 1;
     mod = max(2, mod);
     cout << "Interval: " << interval_start << ".."
          << int(interval_start) + mod - 1 << '\n';
 
-    for (int ind = 0; ind < size; ind++) {
-      ind[value] = rand() % mod + interval_start;
+    for (int ind = 0; ind < array_size; ind++) {
+      ind[array] = rand() % mod + interval_start;
     }
     cout << "Array:\n";
-    for (int ind = 0; ind < size; ind++) {
-      cout << ind[value] << ' ';
+    for (int ind = 0; ind < array_size; ind++) {
+      cout << ind[array] << ' ';
     }
     cout << '\n';
   } else {
-    cout << "Enter " << size << " elements\n";
-    for (int ind = 0; ind < size; ind++) {
-      cin >> ind[value];
+    cout << "Enter " << array_size << " elements\n";
+    for (int ind = 0; ind < array_size; ind++) {
+      cin >> ind[array];
     }
   }
-  int sum = 0;
+  return array;
+}
+
+void taskSum() {
+  cout
+      << "Task2: Get the sum and average value of the elements in the array\n\n";
+  int size;
+  double* value;
+  value = getArray(size);
+  cout << value << '\n';
+  double sum = 0;
   for (int ind = 0; ind < size; ind++) {
-    sum += ind[value];
+    sum += value[ind];
   }
   cout << "Sum = " << sum << '\n';
   double average = double(sum) / size;
   cout << "Average = " << average << '\n';
 
   cout << "\n\n";
+  delete [] value;
 }
 
 void taskMultiply() {
@@ -155,11 +164,50 @@ void taskMultiply() {
   cout << "\n\n";
 }
 
-void taskDelete() {
+double getMediumValue(double* array, int& array_size) {
+  std::sort(array, array + array_size);
+  double medium;
+  if (array_size % 2 == 0) {
+    return (array[array_size / 2] + array[array_size / 2 - 1]) / 2;
+  } else {
+    return array[array_size / 2];
+  }
+}
 
+void deleteDuplicateItems(double* array, int& array_size) {
+  std::sort(array, array + array_size);
+  int left = 0;
+  int right = 0;
+  while (true) {
+    while (array[left] == array[right] && right < array_size) {
+      right++;
+    }
+    left++;
+    if (right == array_size) {
+      break;
+    }
+    array[left] = array[right];
+  }
+  array_size = left;
+}
+
+void taskDelete() {
+  cout << "Task4: Find array medium value and delete duplicate values.\n\n";
+  double* value;
+  int size;
+  value = getArray(size);
+  cout << "Medium value = " << getMediumValue(value, size) << '\n';
+  cout << "Array after deleting duplicate values:\n";
+  deleteDuplicateItems(value, size);
+  for (int ind = 0; ind < size; ind++) {
+    cout << value[ind] << ' ';
+  }
+  cout << "\n\n\n";
+  delete [] value;
 }
 
 void taskMatrixMedian() {
+
 
 }
 
@@ -177,8 +225,8 @@ void matrix::init() {
     cin >> col;
   }
   int mod;
-  int interval_start;
-  int interval_finish;
+  double interval_start;
+  double interval_finish;
   cout << "Enter the number generation interval\n";
   cout << "Min value = ";
   cin >> interval_start;
@@ -194,9 +242,9 @@ void matrix::init() {
   }
   mod = (interval_finish - interval_start + 1);
 
-  values = new int* [row];
+  values = new double* [row];
   for (int i = 0; i < row; i++) {
-    values[i] = new int[col];
+    values[i] = new double[col];
   }
 
   for (int r = 0; r < row; r++) {
@@ -215,9 +263,9 @@ void matrix::init(int _row, int _col) {
   }
   row = _row;
   col = _col;
-  values = new int* [row];
+  values = new double* [row];
   for (int i = 0; i < row; i++) {
-    values[i] = new int[col];
+    values[i] = new double[col];
   }
 }
 
@@ -253,7 +301,7 @@ matrix matrix::operator*(matrix& matr2) {
   result.init(row, matr2.col);
   for (int r = 0; r < row; r++) {
     for (int c = 0; c < matr2.col; c++) {
-      int buf_result = 0;
+      double buf_result = 0;
       for (int check = 0; check < col; check++) {
         buf_result += values[r][check] * matr2.values[check][c];
       }
