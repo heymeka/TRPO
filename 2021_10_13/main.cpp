@@ -35,7 +35,7 @@ int main() {
   srand(time(NULL));
   matrix* matr1;
   matr1 = initMatrix();
-//    printMatrix(matr1);
+  printMatrix(matr1);
 
   eraseMatrix(matr1);
   system("pause");
@@ -75,7 +75,7 @@ matrix* initMatrix() {
     cin >> interval_finish;
 
   }
-  mod = (interval_finish - interval_start);
+  mod = (interval_finish - interval_start + 1);
 
   matr->row = row;
   matr->col = col;
@@ -86,7 +86,7 @@ matrix* initMatrix() {
 
   for (int r = 0; r < row; r++) {
     for (int c = 0; c < col; c++) {
-      matr->values[r][c] = rand() % mod - interval_start;
+      matr->values[r][c] = rand() % mod + interval_start;
     }
   }
   return matr;
@@ -97,4 +97,19 @@ void eraseMatrix(matrix* matr) {
     delete[] matr->values[i];
   }
   delete[] matr->values;
+}
+
+
+void printMatrix(matrix* matr) {
+  if(matr -> row == 0 || matr -> col == 0) {
+    cout << "Error. Invalid matrix to print\n";
+    return;
+  }
+  cout << "Matrix:\n";
+  for(int r = 0; r < matr -> row; r++) {
+    for(int c = 0; c < matr -> col; c++) {
+      cout << matr -> values[r][c] << ' ';
+    }
+    cout << '\n';
+  }
 }
