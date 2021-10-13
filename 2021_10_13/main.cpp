@@ -11,9 +11,12 @@
 #include <iomanip>
 #include <conio.h>
 #include <ctime>
+
 using std::cout;
 using std::cin;
 using std::setw;
+using std::sort;
+
 const int SPACE = 5;
 
 class matrix {
@@ -26,10 +29,14 @@ class matrix {
     row = 0;
     col = 0;
   }
+  ~matrix();
   void init(int _row, int _col);
   void init();
   void print();
-  void erase();
+  void sort_elements();
+  double getMaximumElement();
+  double getMinimumElement();
+  double getMediumValue();
   matrix operator*(matrix& matr2);
 };
 
@@ -73,7 +80,6 @@ void taskPrint() {
   matr1.init();
   cout << "Matrix:\n";
   matr1.print();
-  matr1.erase();
   cout << "\n\n";
 }
 
@@ -127,7 +133,6 @@ void taskSum() {
   int size;
   double* value;
   value = getArray(size);
-  cout << value << '\n';
   double sum = 0;
   for (int ind = 0; ind < size; ind++) {
     sum += value[ind];
@@ -158,14 +163,11 @@ void taskMultiply() {
   matrix matr3 = matr1 * matr2;
   matr3.print();
 
-  matr1.erase();
-  matr2.erase();
-  matr3.erase();
   cout << "\n\n";
 }
 
 double getMediumValue(double* array, int& array_size) {
-  std::sort(array, array + array_size);
+  sort(array, array + array_size);
   double medium;
   if (array_size % 2 == 0) {
     return (array[array_size / 2] + array[array_size / 2 - 1]) / 2;
@@ -175,7 +177,7 @@ double getMediumValue(double* array, int& array_size) {
 }
 
 void deleteDuplicateItems(double* array, int& array_size) {
-  std::sort(array, array + array_size);
+  sort(array, array + array_size);
   int left = 0;
   int right = 0;
   while (true) {
@@ -207,8 +209,18 @@ void taskDelete() {
 }
 
 void taskMatrixMedian() {
+  cout << "Task 5: Find matrix maximum, minimum elements and medium value\n\n";
+  matrix matr;
+  matr.init();
+  cout << "Matrix:\n";
+  matr.print();
+  matr.sort_elements();
+  cout << "\n\n";
+  cout << "Minimal element = " << matr.getMinimumElement() << '\n';
+  cout << "Medium value = " << matr.getMediumValue() << '\n';
+  cout << "Maximal element = " << matr.getMaximumElement() << '\n';
 
-
+  cout << "\n\n";
 }
 
 void matrix::init() {
@@ -256,10 +268,10 @@ void matrix::init() {
 
 void matrix::init(int _row, int _col) {
   if (_row < 1) {
-    _row = 1;
+    _row = 0;
   }
   if (_col < 1) {
-    _col = 1;
+    _col = 0;
   }
   row = _row;
   col = _col;
@@ -269,7 +281,7 @@ void matrix::init(int _row, int _col) {
   }
 }
 
-void matrix::erase() {
+matrix::~matrix() {
   for (int i = 0; i < row; i++) {
     delete[] values[i];
   }
@@ -294,8 +306,7 @@ matrix matrix::operator*(matrix& matr2) {
   if (row < 1 || col < 1 || matr2.row < 1 || matr2.col < 1
       || col != matr2.row) {
     cout << "Error. Invalid matrix to multiply\n";
-    result.init(1, 1);
-    result.values[0][0] = -(1 << 25);
+    result.init(0, 0);
     return result;
   }
   result.init(row, matr2.col);
@@ -309,4 +320,39 @@ matrix matrix::operator*(matrix& matr2) {
     }
   }
   return result;
+}
+
+void matrix::sort_elements() {
+  int size = col * row;
+  double* buf_array = new double[size];
+  for(int ind = 0; ind < size; ind++) {
+    buf_array[ind] = values[ind / col][ind % col];
+  }
+  sort(buf_array, buf_array + size);
+  for(int ind = 0; ind < size; ind++) {
+    values[ind / col][ind % col] = buf_array[ind];
+  }
+  delete [] buf_array;
+}
+
+double matrix::getMaximumElement() {
+  return values[row - 1][col - 1];
+}
+
+double matrix::getMinimumElement() {
+  return values[0][0];
+}
+
+double matrix::getMediumValue() {
+  double medium_value;
+  if(col * row % 2 == 0) {
+    int first_col = (row * col / 2 - 1) / col;
+    int first_row = (row * col / 2 - 1) % col;
+    int second_col = (row * col / 2) / col;
+    int second_row = (row * col / 2) % col;
+    medium_value = (values[first_row][first_col] + values[second_row][second_col]) / 2;
+  } else {
+    medium_value = values[row / 2][col / 2];
+  }
+  return medium_value;
 }
