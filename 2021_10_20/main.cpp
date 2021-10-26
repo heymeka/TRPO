@@ -4,19 +4,51 @@ using std::string;
 using std::cin;
 using std::cout;
 
-string getStringFromValue(long long value, int numbers_count = (1 << 27));
+string getStringFromValue(int value, int numbers_count = (1 << 27));
 string getStringFromValue(double value);
+int countOfArrayOccurrences(string& array, char value);
+int countOfArrayOccurrences(int* array, int array_size, int value);
+int countOfArrayOccurrences(long long* array, int array_size, long long value);
+int countOfArrayOccurrences(char* array, int array_size, char value);
+int countOfArrayOccurrences(double* array, int array_size, double value);
+
+void testTaskValues();
+void testTaskArray();
 
 int main() {
-  // cout << getStringFromValue((long long) 123) << '\n';
-  cout << getStringFromValue(1. / 7) << '\n';
-
+  testTaskValues();
   system("pause");
   return 0;
 }
 
-string getStringFromValue(long long value, int numbers_count) {
-  cout << numbers_count << '\n';
+void testTaskValues() {
+  cout << "Task 1 + Task 2 test (value to string)\n\n";
+
+  int int_value;
+  cout << "Test int value = ";
+  cin >> int_value;
+  cout << "String value = " << getStringFromValue(int_value) << '\n';
+
+  int digits_count;
+  cout << "Test int value = ";
+  cin >> int_value;
+  cout << "Digits to output = ";
+  cin >> digits_count;
+  cout << "String value = " << getStringFromValue(int_value, digits_count) << '\n';
+
+
+  double double_value;
+  cout << "Test double value = ";
+  cin >> double_value;
+  cout << "String value = " << getStringFromValue(double_value) << '\n';
+  cout << "Task 1 + Task 2 is completed\n\n";
+}
+
+void testTaskArray() {
+  //
+}
+
+string getStringFromValue(int value, int numbers_count) {
   string raw_value;
   if (value == 0) {
     raw_value = "0";
@@ -86,8 +118,58 @@ string getStringFromValue(double value) {
   }
   raw_value = first_zeroes + raw_value + last_zeroes;
   raw_value.insert(dot_index, ".");
-  if(is_negative) {
+  if (is_negative) {
     raw_value.insert(0, "-");
   }
   return raw_value;
+}
+
+int countOfArrayOccurrences(string& array, char value) {
+  int occurrences = 0;
+  for (auto item: array) {
+    if (item == occurrences) {
+      occurrences++;
+    }
+  }
+  return occurrences;
+}
+
+int countOfArrayOccurrences(int* array, int array_size, int value) {
+  int occurrences = 0;
+  for(int item_index = 0; item_index < array_size; item_index++) {
+    if (array[item_index] == value) {
+      occurrences++;
+    }
+  }
+  return occurrences;
+}
+
+int countOfArrayOccurrences(long long* array, int array_size, long long value) {
+  int occurrences = 0;
+  for(int item_index = 0; item_index < array_size; item_index++) {
+    if (array[item_index] == value) {
+      occurrences++;
+    }
+  }
+  return occurrences;
+}
+
+int countOfArrayOccurrences(char* array, int array_size, char value) {
+  int occurrences = 0;
+  for(int item_index = 0; item_index < array_size; item_index++) {
+    if (array[item_index] == value) {
+      occurrences++;
+    }
+  }
+  return occurrences;
+}
+
+int countOfArrayOccurrences(double* array, int array_size, double value) {
+  int occurrences = 0;
+  for(int item_index = 0; item_index < array_size; item_index++) {
+    if (array[item_index] == value) {
+      occurrences++;
+    }
+  }
+  return occurrences;
 }
