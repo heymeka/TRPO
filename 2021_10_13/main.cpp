@@ -38,6 +38,7 @@ class matrix {
   double getMinimumElement();
   double getMediumValue();
   matrix operator*(matrix& matr2);
+  matrix operator=(matrix& matr);
 };
 
 void deleteDuplicateItems(double* array, int& array_size);
@@ -355,4 +356,13 @@ double matrix::getMediumValue() {
     medium_value = values[row / 2][col / 2];
   }
   return medium_value;
+}
+
+matrix matrix::operator=(matrix &matr) {
+  row = matr.row;
+  col = matr.col;
+  values = matr.values;
+  for(int row_index = 0; row_index < row; row_index++) {
+    values[row_index] = matr.values[row_index];
+  }
 }
