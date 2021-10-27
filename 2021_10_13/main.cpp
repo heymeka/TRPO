@@ -357,3 +357,19 @@ double matrix::getMediumValue() {
   }
   return medium_value;
 }
+
+matrix matrix::operator=(matrix &matr) {
+  if(row != 0) {
+    for(int row_index = 0; row_index < row; row_index++) {
+      delete[] values[row_index];
+    }
+    delete[] values;
+  }
+  row = matr.row;
+  col = matr.col;
+  values = matr.values;
+  for(int row_index = 0; row_index < row; row_index++) {
+    values[row_index] = matr.values[row_index];
+  }
+  return *this;
+}
