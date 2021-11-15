@@ -1,12 +1,22 @@
+/**
+      ---------------------------------------------------
+      |         Made by Shamal Viktor (@j3uktop)        |
+      |           2019-2021 - Lyceum BSU - IM           |
+      |             2021 - BSUIR - FCP - PMS            |
+      |          *** All rights reserved ***            |
+      ---------------------------------------------------
+                                            			**/
 #include <iostream>
 #include <map>
 #include <iomanip>
+#include <algorithm>
 
 using std::cin;
 using std::cout;
 using std::string;
 using std::map;
 using std::setw;
+using std::sort;
 
 string ERROR_MESSAGE[] = {"Num have to be not negative ( >= 0)\n",
 };
@@ -18,9 +28,9 @@ struct FullName {
   string patronymic = "Ivanovich";
 };
 
-std::ostream& operator<<(std::ostream& out, const FullName& value) {
-  out << value.surname << " " << value.name << " " << value.patronymic;
-  return out;
+std::ostream& operator<<(std::ostream& to_out, const FullName& value) {
+  to_out << value.surname << " " << value.name << " " << value.patronymic;
+  return to_out;
 }
 
 struct BirthDate {
@@ -29,9 +39,16 @@ struct BirthDate {
   int year;
 };
 
-std::ostream& operator<<(std::ostream& out, const BirthDate& birth) {
-  out << birth.day << "." << birth.month << "." << birth.year;
-  return out;
+std::ostream& operator<<(std::ostream& to_out, const BirthDate& birth) {
+  if(birth.day < 10) {
+    to_out << "0";
+  }
+  to_out << birth.day << ".";
+  if(birth.month < 10) {
+    to_out << "0";
+  }
+  to_out << birth.month << "." << birth.year;
+  return to_out;
 }
 
 struct student {
@@ -51,10 +68,22 @@ void printStudents(student* p_student, int& size);
 
 string findMostPopularName(student* p_student, int count);
 
-int main() {
-  workWithStudents();
-  system("pause");
-  return 0;
+/////////////////////////////////////////////////////////////////////
+  int main() {
+    workWithStudents();
+    system("pause");
+    return 0;
+  }
+/////////////////////////////////////////////////////////////////////
+
+bool studentsByName(student& first, student& second) {
+    if(first.full_name.surname != second.full_name.surname) {
+      return first.full_name.surname < second.full_name.surname;
+    } else if(first.full_name.name != second.full_name.name) {
+      return first.full_name.name < second.full_name.name;
+    } else {
+      return first.full_name.patronymic < second.full_name.patronymic;
+    }
 }
 
 void workWithStudents() {
@@ -64,6 +93,9 @@ void workWithStudents() {
   printStudents(students_list, students_count);
   cout << "Most popular name: ";
   cout << findMostPopularName(students_list, students_count) << '\n';
+  sort(students_list, students_list + students_count, studentsByName);
+  cout << "Students after sort by name:\n";
+  printStudents(students_list, students_count);
   deleteStudentsArray(students_list, students_count);
 }
 
