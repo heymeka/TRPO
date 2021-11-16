@@ -71,13 +71,65 @@ string findMostPopularName(student* p_student, int size);
 
 double getAverageAge(student* p_student, int size);
 
+void workWithBMP();
+
 /////////////////////////////////////////////////////////////////////
 int main() {
-  workWithStudents();
+  // workWithStudents();
+  workWithBMP();
   system("pause");
   return 0;
 }
 /////////////////////////////////////////////////////////////////////
+
+int getImageWidth(FILE* IMAGE) {
+#define WIDTH_OFFSET 0x0012
+  int image_width;
+  fseek(IMAGE, WIDTH_OFFSET, SEEK_SET);
+  fread(&image_width, 4, 1, IMAGE);
+#undef WIDTH_OFFSET
+  return image_width;
+}
+
+int getImageHeight(FILE* IMAGE) {
+#define HEIGHT_OFFSET 0x0016
+  int image_height;
+  fseek(IMAGE, HEIGHT_OFFSET, SEEK_SET);
+  fread(&image_height, 4, 1, IMAGE);
+#undef HEIGHT_OFFSET
+  return image_height;
+}
+
+int getImageDataOffset(FILE* IMAGE) {
+#define HEADER_OFFSET 0x000A
+  fseek(IMAGE, HEADER_OFFSET, SEEK_SET);
+  int image_data_offset;
+  fread(&image_data_offset, 4, 1, IMAGE);
+#undef HEADER_OFFSET
+  return image_data_offset;
+}
+
+int getImageBitsPerPixel(FILE* IMAGE) {
+#define BITS_PER_PIXEL_OFFSET 0x001C
+  int bits_per_pixel;
+  fseek(IMAGE, BITS_PER_PIXEL_OFFSET, SEEK_SET);
+  fread(&bits_per_pixel, 2, 1, IMAGE);
+#undef BITS_PER_PIXEL_OFFSET
+  return bits_per_pixel;
+}
+
+void workWithBMP() {
+  const string IMAGE_NAME = "sample.bmp";
+  FILE* IMAGE = fopen(IMAGE_NAME.c_str(), "rb");
+  int image_data_offset = getImageDataOffset(IMAGE);
+  int image_width = getImageWidth(IMAGE);
+  int image_height = getImageHeight(IMAGE);
+  int bits_per_pixel = getImageBitsPerPixel(IMAGE);
+  cout << "Data offset = " << image_data_offset << '\n';
+  cout << "Width = " << image_width << '\n';
+  cout << "Height = " << image_height << '\n';
+  cout << "Bits per pixel = " << bits_per_pixel << '\n';
+}
 
 bool studentsByName(student& first, student& second) {
   if (first.full_name.surname != second.full_name.surname) {
