@@ -10,6 +10,7 @@
 #include <map>
 #include <iomanip>
 #include <algorithm>
+#include <ctime>
 
 using std::cin;
 using std::cout;
@@ -33,18 +34,18 @@ std::ostream& operator<<(std::ostream& to_out, const FullName& value) {
   return to_out;
 }
 
-struct BirthDate {
+struct Date {
   int day;
   int month;
   int year;
 };
 
-std::ostream& operator<<(std::ostream& to_out, const BirthDate& birth) {
-  if(birth.day < 10) {
+std::ostream& operator<<(std::ostream& to_out, const Date& birth) {
+  if (birth.day < 10) {
     to_out << "0";
   }
   to_out << birth.day << ".";
-  if(birth.month < 10) {
+  if (birth.month < 10) {
     to_out << "0";
   }
   to_out << birth.month << "." << birth.year;
@@ -53,7 +54,7 @@ std::ostream& operator<<(std::ostream& to_out, const BirthDate& birth) {
 
 struct student {
   FullName full_name;
-  BirthDate birth;
+  Date birth;
   int marks_count = 0;
   int* marks = nullptr;
 };
@@ -77,13 +78,38 @@ int main() {
 /////////////////////////////////////////////////////////////////////
 
 bool studentsByName(student& first, student& second) {
-  if(first.full_name.surname != second.full_name.surname) {
+  if (first.full_name.surname != second.full_name.surname) {
     return first.full_name.surname < second.full_name.surname;
-  } else if(first.full_name.name != second.full_name.name) {
+  } else if (first.full_name.name != second.full_name.name) {
     return first.full_name.name < second.full_name.name;
   } else {
     return first.full_name.patronymic < second.full_name.patronymic;
   }
+}
+
+Date getCurrentDate() {
+  std::time_t current_time = std::time(nullptr);
+  std::tm* now = std::localtime(&current_time);
+  Date current_date;
+  current_date.year = 1900 + now->tm_year;
+  current_date.month = 1 + now->tm_mon;
+  current_date.day = now->tm_mday;
+  return current_date;
+}
+
+int getAge(Date birth, Date current) {
+  if (current.year < birth.year || (current.year == birth.year
+      && (current.month < birth.month
+          || (current.month == birth.month && current.day < birth.day)))) {
+    return INT_MIN;
+  }
+  int age = current.year - birth.year;
+  if (birth.month > current.month
+      || (birth.month == current.month && birth.day >= current.day)) {
+    age--;
+  }
+  age = std::max(age, 0);
+  return age;
 }
 
 void workWithStudents() {
@@ -96,6 +122,7 @@ void workWithStudents() {
   sort(students_list, students_list + students_count, studentsByName);
   cout << "Students after sort by name:\n";
   printStudents(students_list, students_count);
+
   deleteStudentsArray(students_list, students_count);
 }
 
@@ -114,8 +141,8 @@ string findMostPopularName(student* p_student, int size) {
   //   }
   // }
   // C++11
-  for(auto& value: names) {
-    if(value.second > max_) {
+  for (auto& value: names) {
+    if (value.second > max_) {
       max_ = value.second;
       most_popular = value.first;
     }
@@ -159,7 +186,8 @@ void printStudents(student* p_student, int& size) {
   for (int index = 0; index < size; ++index) {
     cout << setw(30) << p_student[index].full_name << setw(12)
          << p_student[index].birth << "   Marks: ";
-    for(int mark_index = 0 ; mark_index < p_student[index].marks_count; ++mark_index) {
+    for (int mark_index = 0; mark_index < p_student[index].marks_count;
+         ++mark_index) {
       cout << p_student[index].marks[mark_index] << ' ';
     }
     cout << '\n';
