@@ -19,9 +19,9 @@ using std::map;
 using std::setw;
 using std::sort;
 
-string ERROR_MESSAGE[] = {"Num have to be not negative ( >= 0)\n",
-};
-enum ERRORS { IS_NEGATIVE, };
+const string ERROR_MESSAGE[] = {"Num have to be not negative ( >= 0)\n",
+                           "The date of birth most be before the current moment\n"};
+enum ERRORS { IS_NEGATIVE, BIRTH_ERROR };
 
 struct FullName {
   string name = "Ivan";
@@ -35,20 +35,20 @@ std::ostream& operator<<(std::ostream& to_out, const FullName& value) {
 }
 
 struct Date {
-  int day;
-  int month;
-  int year;
+  int day = 0;
+  int month = 0;
+  int year = 0;
 };
 
-std::ostream& operator<<(std::ostream& to_out, const Date& birth) {
-  if (birth.day < 10) {
+std::ostream& operator<<(std::ostream& to_out, const Date& out_date) {
+  if (out_date.day < 10) {
     to_out << "0";
   }
-  to_out << birth.day << ".";
-  if (birth.month < 10) {
+  to_out << out_date.day << ".";
+  if (out_date.month < 10) {
     to_out << "0";
   }
-  to_out << birth.month << "." << birth.year;
+  to_out << out_date.month << "." << out_date.year;
   return to_out;
 }
 
@@ -67,7 +67,9 @@ void deleteStudentsArray(student* p_student, int& size);
 
 void printStudents(student* p_student, int& size);
 
-string findMostPopularName(student* p_student, int count);
+string findMostPopularName(student* p_student, int size);
+
+double getAverageAge(student* p_student, int size);
 
 /////////////////////////////////////////////////////////////////////
 int main() {
@@ -87,10 +89,31 @@ bool studentsByName(student& first, student& second) {
   }
 }
 
+void workWithStudents() {
+  int students_count;
+  student* students_list = createStudentArray(students_count);
+
+  cout << "Students:\n";
+  printStudents(students_list, students_count);
+
+  cout << "Most popular name: ";
+  cout << findMostPopularName(students_list, students_count) << '\n';
+
+  sort(students_list, students_list + students_count, studentsByName);
+  cout << "Students after sort by name:\n";
+  printStudents(students_list, students_count);
+
+  double average_age = getAverageAge(students_list, students_count);
+  cout << "Average age = " << average_age << '\n';
+
+  deleteStudentsArray(students_list, students_count);
+}
+
 Date getCurrentDate() {
   std::time_t current_time = std::time(nullptr);
   std::tm* now = std::localtime(&current_time);
   Date current_date;
+
   current_date.year = 1900 + now->tm_year;
   current_date.month = 1 + now->tm_mon;
   current_date.day = now->tm_mday;
@@ -101,6 +124,7 @@ int getAge(Date birth, Date current) {
   if (current.year < birth.year || (current.year == birth.year
       && (current.month < birth.month
           || (current.month == birth.month && current.day < birth.day)))) {
+    cout << ERROR_MESSAGE[BIRTH_ERROR];
     return INT_MIN;
   }
   int age = current.year - birth.year;
@@ -112,18 +136,13 @@ int getAge(Date birth, Date current) {
   return age;
 }
 
-void workWithStudents() {
-  int students_count;
-  student* students_list = createStudentArray(students_count);
-  cout << "Students:\n";
-  printStudents(students_list, students_count);
-  cout << "Most popular name: ";
-  cout << findMostPopularName(students_list, students_count) << '\n';
-  sort(students_list, students_list + students_count, studentsByName);
-  cout << "Students after sort by name:\n";
-  printStudents(students_list, students_count);
-
-  deleteStudentsArray(students_list, students_count);
+double getAverageAge(student* p_student, int size) {
+  int age_sum = 0;
+  Date current_date = getCurrentDate();
+  for (int index = 0; index < size; ++index) {
+    age_sum += getAge(p_student[index].birth, current_date);
+  }
+  return 1. * age_sum / size;
 }
 
 string findMostPopularName(student* p_student, int size) {
@@ -157,20 +176,24 @@ student* createStudentArray(int& size) {
     cin >> size;
   } while (size < 0);
   auto* new_students = new student[size];
+
   cout << "Enter students info:\n";
   for (int student_index = 0; student_index < size; ++student_index) {
     cout << "Enter full FullName (Surname Name Patronymic): ";
     cin >> new_students[student_index].full_name.surname
         >> new_students[student_index].full_name.name
         >> new_students[student_index].full_name.patronymic;
+
     cout << "Enter full date of birth (Day Month Year): ";
     cin >> new_students[student_index].birth.day
         >> new_students[student_index].birth.month
         >> new_students[student_index].birth.year;
+
     cout << "Enter count of student's marks: ";
     cin >> new_students[student_index].marks_count;
     new_students[student_index].marks =
         new int[new_students[student_index].marks_count];
+
     cout << "Enter " << new_students[student_index].marks_count
          << " marks of this student\n";
     for (int mark_index = 0;
@@ -185,7 +208,8 @@ void printStudents(student* p_student, int& size) {
   cout << size << " students:\n";
   for (int index = 0; index < size; ++index) {
     cout << setw(30) << p_student[index].full_name << setw(12)
-         << p_student[index].birth << "   Marks: ";
+         << p_student[index].birth;
+    cout << "   Marks: ";
     for (int mark_index = 0; mark_index < p_student[index].marks_count;
          ++mark_index) {
       cout << p_student[index].marks[mark_index] << ' ';
@@ -199,4 +223,5 @@ void deleteStudentsArray(student* p_student, int& size) {
     delete[] p_student[index].marks;
   }
   delete[] p_student;
-};
+  size = 0;
+}
