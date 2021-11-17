@@ -22,8 +22,9 @@ using std::byte;
 
 const string ERROR_MESSAGE[] = {"Num have to be not negative ( >= 0)\n",
                                 "The date of birth most be before the current moment\n",
-                                "This is not a BitMap image!\n"};
-enum ERRORS { IS_NEGATIVE, BIRTH_ERROR, NOT_BITMAP_IMAGE };
+                                "This is not a BitMap image!\n",
+                                "Unable to convert to black and white image\n"};
+enum ERRORS { IS_NEGATIVE, BIRTH_ERROR, NOT_BITMAP_IMAGE, INVALID_BIT_COUNT };
 
 struct FullName {
   string name = "Ivan";
@@ -85,8 +86,8 @@ int main() {
 /////////////////////////////////////////////////////////////////////
 
 class MyImage {
-  // private:
- public:
+ private:
+  // public:
   FILE* IMAGE;
   byte** pixels;
   int width;
@@ -94,23 +95,48 @@ class MyImage {
   int real_row_width;
   int bordered_row_width;
   int bytes_per_pixel;
+  int bits_per_pixel;
   void setImageWidth();
   void setImageHeight();
   int getImageDataOffset();
   void setImageBytesPerPixel();
-  void saveImage__saveHeaderInfo();
+  void saveImage_saveHeaderInfo();
+
  public:
   MyImage();
-  void openImage(string file_name);
-  void saveImage(string file_name);
-  int getWidth() const { return width; }
-  int getHeight() const { return height; }
-  int getBytesPerPixel() const { return bytes_per_pixel; }
+  MyImage(int init_height, int init_width, int init_bytes_per_color);
+  void openImage(const string& file_name);
+  void saveImage(const string& file_name);
+  int getWidth();
+  int getHeight();
+  int getBitsPerPixel();
+  MyImage transformToBlackAndWhite(int compress_bits_per_pixel);
+  MyImage& operator=(const MyImage& new_image);
+  void printInfoAboutImage();
   ~MyImage();
 };
 MyImage::MyImage() {
   IMAGE = nullptr;
   pixels = nullptr;
+  width = 0;
+  height = 0;
+  bytes_per_pixel = 0;
+  real_row_width = 0;
+  bordered_row_width = 0;
+  bits_per_pixel = 0;
+}
+MyImage::MyImage(int init_height, int init_width, int init_bits_per_color) {
+  bits_per_pixel = init_bits_per_color;
+  bytes_per_pixel = (bits_per_pixel + 7) / 8;
+  height = init_height;
+  width = init_width;
+  real_row_width = width * bytes_per_pixel;
+  bordered_row_width = ((width + 3) / 4) * 4 * bytes_per_pixel;
+  IMAGE = nullptr;
+  pixels = new byte* [height];
+  for (int row = 0; row < height; ++row) {
+    pixels[row] = new byte[real_row_width];
+  }
 }
 MyImage::~MyImage() {
   for (int index = 0; index < height; ++index) {
@@ -119,16 +145,15 @@ MyImage::~MyImage() {
   delete[] pixels;
 }
 
-void MyImage::openImage(string file_name) {
+void MyImage::openImage(const string& file_name) {
   IMAGE = fopen(file_name.c_str(), "rb");
   char check_b, check_m;
   fread(&check_b, 1, 1, IMAGE);
   fread(&check_m, 1, 1, IMAGE);
   if (check_b != 'B' || check_m != 'M') {
-    cout << ERROR_MESSAGE[NOT_BITMAP_IMAGE];
     fclose(IMAGE);
     IMAGE = nullptr;
-    return;
+    throw std::invalid_argument(ERROR_MESSAGE[NOT_BITMAP_IMAGE]);
   }
   int image_data_offset = getImageDataOffset();
   setImageBytesPerPixel();
@@ -150,9 +175,9 @@ void MyImage::openImage(string file_name) {
   fclose(IMAGE);
   IMAGE = nullptr;
 }
-void MyImage::saveImage(string file_name) {
+void MyImage::saveImage(const string& file_name) {
   IMAGE = fopen(file_name.c_str(), "wb");
-  this->saveImage__saveHeaderInfo();
+  this->saveImage_saveHeaderInfo();
   const unsigned char ZERO = 0;
   if (bordered_row_width - real_row_width > 0) {
     for (int index = 0; index < height; ++index) {
@@ -168,16 +193,76 @@ void MyImage::saveImage(string file_name) {
   IMAGE = nullptr;
 }
 
-void MyImage::saveImage__saveHeaderInfo() {
+MyImage MyImage::transformToBlackAndWhite(int compress_bits_per_pixel) {
+  compress_bits_per_pixel = std::min(8, compress_bits_per_pixel);
+  compress_bits_per_pixel = std::max(1, compress_bits_per_pixel);
+  if (bits_per_pixel != 24) {
+    throw std::invalid_argument(ERROR_MESSAGE[INVALID_BIT_COUNT]);
+  }
+  MyImage new_image(height, width, 8);
+
+  const double CONST_R_IN_RGB = 0.2126;
+  const double CONST_G_IN_RGB = 0.7152;
+  const double CONST_B_IN_RGB = 0.0722;
+
+  int color_count = (1 << compress_bits_per_pixel) - 1;
+  int color;
+  int segment_length = 255 / color_count;
+  for (int row = 0; row < height; ++row) {
+    for (int col = 0; col < width; ++col) {
+      color = CONST_B_IN_RGB * (int) (pixels[row][col * bytes_per_pixel])
+          + CONST_G_IN_RGB * (int) (pixels[row][col * bytes_per_pixel + 1])
+          + CONST_R_IN_RGB * (int) (pixels[row][col * bytes_per_pixel + 2])
+          - 0.1;
+      color =
+          ((color + color % segment_length) / segment_length) * segment_length;
+      new_image.pixels[row][col] = (byte) color;
+    }
+  }
+  return new_image;
+}
+
+MyImage& MyImage::operator=(const MyImage& new_image) {
+  if (this == &new_image) {
+    return *this;
+  }
+  if (pixels != nullptr) {
+    for (int index = 0; index < height; ++index) {
+      delete[] pixels[index];
+    }
+    delete[] pixels;
+  }
+  IMAGE = nullptr;
+  height = new_image.height;
+  width = new_image.width;
+  bits_per_pixel = new_image.bits_per_pixel;
+  bytes_per_pixel = new_image.bytes_per_pixel;
+  real_row_width = new_image.real_row_width;
+  bordered_row_width = new_image.bordered_row_width;
+  pixels = new byte* [height];
+  for (int row = 0; row < height; ++row) {
+    pixels[row] = new byte[real_row_width];
+    for (int col = 0; col < real_row_width; ++col) {
+      pixels[row][col] = new_image.pixels[row][col];
+    }
+  }
+  return *this;
+}
+
+void MyImage::saveImage_saveHeaderInfo() {
   if (IMAGE == nullptr) {
     return;
   }
+  // const int HEADER_SIZE = 124;
   const int HEADER_SIZE = 40;
-  const int DATA_OFFSET = 14 + HEADER_SIZE;
+  int DATA_OFFSET = 14 + HEADER_SIZE;
+  int COLOUR_COUNT = 0;
+  if (bits_per_pixel < 9) {
+    COLOUR_COUNT = 1 << (bits_per_pixel);
+    DATA_OFFSET += COLOUR_COUNT * 4;
+  }
   const short int PLANES_COUNT = 1;
   const int COMPRESSION = 0;
-  const short int bits_per_pixel = bytes_per_pixel * 8;
-  // const int INFO_HEADER_SIZE = 124;
   fwrite("BM", 2, 1, IMAGE);
   int image_size = real_row_width * height;
   int file_size = image_size + DATA_OFFSET;
@@ -194,8 +279,21 @@ void MyImage::saveImage__saveHeaderInfo() {
   fwrite(&image_size, 4, 1, IMAGE);
   fwrite(&UNUSED_MEMORY, 4, 1, IMAGE); // Pixels per meter in X
   fwrite(&UNUSED_MEMORY, 4, 1, IMAGE); // Pixels per meter in Y
-  fwrite(&UNUSED_MEMORY, 4, 1, IMAGE); // Colors used
+  fwrite(&COLOUR_COUNT, 4, 1, IMAGE); // Colors used
   fwrite(&UNUSED_MEMORY, 4, 1, IMAGE); // Important colours
+  if (bits_per_pixel < 9) {
+    unsigned char write_index;
+    unsigned char ZERO = 0;
+    int add_value = 1 << (8 - bits_per_pixel);
+    cout << "Add_value = " << add_value << '\n';
+    for (int index = 0; index < COLOUR_COUNT; index += add_value) {
+      write_index = index;
+      fwrite(&write_index, 1, 1, IMAGE);
+      fwrite(&write_index, 1, 1, IMAGE);
+      fwrite(&write_index, 1, 1, IMAGE);
+      fwrite(&ZERO, 1, 1, IMAGE);
+    }
+  }
 }
 void MyImage::setImageWidth() {
 #define WIDTH_OFFSET 0x0012
@@ -219,20 +317,35 @@ int MyImage::getImageDataOffset() {
 }
 void MyImage::setImageBytesPerPixel() {
 #define BITS_PER_PIXEL_OFFSET 0x001C
-  short int bits;
   fseek(IMAGE, BITS_PER_PIXEL_OFFSET, SEEK_SET);
-  fread(&bits, 2, 1, IMAGE);
-  bytes_per_pixel = bits / 8;
+  fread(&bits_per_pixel, 2, 1, IMAGE);
+  bytes_per_pixel = (bits_per_pixel + 7) / 8;
 #undef BITS_PER_PIXEL_OFFSET
+}
+int MyImage::getWidth() { return width; }
+int MyImage::getHeight() { return height; }
+int MyImage::getBitsPerPixel() { return bits_per_pixel; }
+void MyImage::printInfoAboutImage() {
+  cout << "Height = " << height << '\n';
+  cout << "Width = " << width << '\n';
+  cout << "Bits per pixel = " << bits_per_pixel << '\n';
+  cout << "Bytes per pixel = " << bytes_per_pixel << "\n\n";
 }
 
 void workWithBMP() {
   string IMAGE_NAME = "sample.bmp";
-  MyImage test_image;
-  test_image.openImage(IMAGE_NAME);
-  cout << "Width = " << test_image.getWidth() << '\n';
-  cout << "Height = " << test_image.getHeight() << '\n';
-  test_image.saveImage("test.bmp");
+  MyImage test_img;
+  test_img.openImage(IMAGE_NAME);
+  test_img.saveImage("test.bmp");
+
+  cout << "Enter bit count to convert to grayscale"
+       << " (1 - black/white, 8 - full 256 grey colors): ";
+  int color_bit_count;
+  cin >> color_bit_count;
+  MyImage greyscale_img = test_img.transformToBlackAndWhite(color_bit_count);
+  greyscale_img.saveImage("test_black_and_white.bmp");
+
+  MyImage
 }
 
 bool studentsByName(student& first, student& second) {
@@ -280,8 +393,7 @@ int getAge(Date birth, Date current) {
   if (current.year < birth.year || (current.year == birth.year
       && (current.month < birth.month
           || (current.month == birth.month && current.day < birth.day)))) {
-    cout << ERROR_MESSAGE[BIRTH_ERROR];
-    return INT_MIN;
+    throw std::invalid_argument(ERROR_MESSAGE[BIRTH_ERROR]);
   }
   int age = current.year - birth.year;
   if (birth.month > current.month
