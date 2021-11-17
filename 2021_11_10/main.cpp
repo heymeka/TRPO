@@ -18,10 +18,12 @@ using std::string;
 using std::map;
 using std::setw;
 using std::sort;
+using std::byte;
 
 const string ERROR_MESSAGE[] = {"Num have to be not negative ( >= 0)\n",
-                           "The date of birth most be before the current moment\n"};
-enum ERRORS { IS_NEGATIVE, BIRTH_ERROR };
+                                "The date of birth most be before the current moment\n",
+                                "This is not a BitMap image!\n"};
+enum ERRORS { IS_NEGATIVE, BIRTH_ERROR, NOT_BITMAP_IMAGE };
 
 struct FullName {
   string name = "Ivan";
@@ -77,30 +79,85 @@ void workWithBMP();
 int main() {
   // workWithStudents();
   workWithBMP();
-  system("pause");
+  // system("pause");
   return 0;
 }
 /////////////////////////////////////////////////////////////////////
 
-int getImageWidth(FILE* IMAGE) {
+class MyImage {
+  // private:
+ public:
+  FILE* IMAGE;
+  byte** pixels;
+  int width;
+  int height;
+  int real_row_width;
+  int bordered_row_width;
+  int bytes_per_pixel;
+  void setImageWidth();
+  void setImageHeight();
+  int getImageDataOffset();
+  void setImageBitsPerPixel();
+
+ public:
+  void openImage(string file_name);
+  void saveImage(string file_name);
+  int getWidth() const { return width; }
+  int getHeight() const { return height; }
+  int getBytesPerPixel() const { return bytes_per_pixel; }
+  ~MyImage();
+};
+
+MyImage::~MyImage() {
+    for (int index = 0; index < height; ++index) {
+      delete[] pixels[index];
+    }
+    delete[] pixels;
+}
+
+void MyImage::openImage(string file_name) {
+  IMAGE = fopen(file_name.c_str(), "rb");
+  char check_b, check_m;
+  fread(&check_b, 1, 1, IMAGE);
+  fread(&check_m, 1, 1, IMAGE);
+  if(check_b != 'B' || check_m != 'M') {
+    cout << ERROR_MESSAGE[NOT_BITMAP_IMAGE];
+    fclose(IMAGE);
+    return;
+  }
+  int image_data_offset = getImageDataOffset();
+  setImageBitsPerPixel();
+  setImageHeight();
+  setImageWidth();
+
+  real_row_width = width * bytes_per_pixel;
+  bordered_row_width = ((width + 3) / 4) * 4 * bytes_per_pixel;
+  pixels = new byte* [height];
+
+  for (int index = 0; index < height; ++index) {
+    pixels[index] = new byte[real_row_width];
+  }
+
+  for (int index = 0; index < height; index++) {
+    fseek(IMAGE, image_data_offset + (index * bordered_row_width), SEEK_SET);
+    fread(pixels[height - index - 1], 1, real_row_width, IMAGE);
+  }
+  fclose(IMAGE);
+}
+
+void MyImage::setImageWidth() {
 #define WIDTH_OFFSET 0x0012
-  int image_width;
   fseek(IMAGE, WIDTH_OFFSET, SEEK_SET);
-  fread(&image_width, 4, 1, IMAGE);
+  fread(&width, 4, 1, IMAGE);
 #undef WIDTH_OFFSET
-  return image_width;
 }
-
-int getImageHeight(FILE* IMAGE) {
+void MyImage::setImageHeight() {
 #define HEIGHT_OFFSET 0x0016
-  int image_height;
   fseek(IMAGE, HEIGHT_OFFSET, SEEK_SET);
-  fread(&image_height, 4, 1, IMAGE);
+  fread(&height, 4, 1, IMAGE);
 #undef HEIGHT_OFFSET
-  return image_height;
 }
-
-int getImageDataOffset(FILE* IMAGE) {
+int MyImage::getImageDataOffset() {
 #define HEADER_OFFSET 0x000A
   fseek(IMAGE, HEADER_OFFSET, SEEK_SET);
   int image_data_offset;
@@ -108,27 +165,21 @@ int getImageDataOffset(FILE* IMAGE) {
 #undef HEADER_OFFSET
   return image_data_offset;
 }
-
-int getImageBitsPerPixel(FILE* IMAGE) {
+void MyImage::setImageBitsPerPixel() {
 #define BITS_PER_PIXEL_OFFSET 0x001C
-  int bits_per_pixel;
+  short int bits;
   fseek(IMAGE, BITS_PER_PIXEL_OFFSET, SEEK_SET);
-  fread(&bits_per_pixel, 2, 1, IMAGE);
+  fread(&bits, 2, 1, IMAGE);
+  bytes_per_pixel = bits / 8;
 #undef BITS_PER_PIXEL_OFFSET
-  return bits_per_pixel;
 }
 
 void workWithBMP() {
-  const string IMAGE_NAME = "sample.bmp";
-  FILE* IMAGE = fopen(IMAGE_NAME.c_str(), "rb");
-  int image_data_offset = getImageDataOffset(IMAGE);
-  int image_width = getImageWidth(IMAGE);
-  int image_height = getImageHeight(IMAGE);
-  int bits_per_pixel = getImageBitsPerPixel(IMAGE);
-  cout << "Data offset = " << image_data_offset << '\n';
-  cout << "Width = " << image_width << '\n';
-  cout << "Height = " << image_height << '\n';
-  cout << "Bits per pixel = " << bits_per_pixel << '\n';
+  string IMAGE_NAME = "sample.bmp";
+  MyImage test_image;
+  test_image.openImage(IMAGE_NAME);
+  cout << "Width = " << test_image.getWidth() << '\n';
+  cout << "Height = " << test_image.getHeight() << '\n';
 }
 
 bool studentsByName(student& first, student& second) {
