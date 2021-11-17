@@ -97,9 +97,10 @@ class MyImage {
   void setImageWidth();
   void setImageHeight();
   int getImageDataOffset();
-  void setImageBitsPerPixel();
-
+  void setImageBytesPerPixel();
+  void saveImage__saveHeaderInfo();
  public:
+  MyImage();
   void openImage(string file_name);
   void saveImage(string file_name);
   int getWidth() const { return width; }
@@ -107,12 +108,15 @@ class MyImage {
   int getBytesPerPixel() const { return bytes_per_pixel; }
   ~MyImage();
 };
-
+MyImage::MyImage() {
+  IMAGE = nullptr;
+  pixels = nullptr;
+}
 MyImage::~MyImage() {
-    for (int index = 0; index < height; ++index) {
-      delete[] pixels[index];
-    }
-    delete[] pixels;
+  for (int index = 0; index < height; ++index) {
+    delete[] pixels[index];
+  }
+  delete[] pixels;
 }
 
 void MyImage::openImage(string file_name) {
@@ -120,13 +124,14 @@ void MyImage::openImage(string file_name) {
   char check_b, check_m;
   fread(&check_b, 1, 1, IMAGE);
   fread(&check_m, 1, 1, IMAGE);
-  if(check_b != 'B' || check_m != 'M') {
+  if (check_b != 'B' || check_m != 'M') {
     cout << ERROR_MESSAGE[NOT_BITMAP_IMAGE];
     fclose(IMAGE);
+    IMAGE = nullptr;
     return;
   }
   int image_data_offset = getImageDataOffset();
-  setImageBitsPerPixel();
+  setImageBytesPerPixel();
   setImageHeight();
   setImageWidth();
 
@@ -143,8 +148,55 @@ void MyImage::openImage(string file_name) {
     fread(pixels[height - index - 1], 1, real_row_width, IMAGE);
   }
   fclose(IMAGE);
+  IMAGE = nullptr;
+}
+void MyImage::saveImage(string file_name) {
+  IMAGE = fopen(file_name.c_str(), "wb");
+  this->saveImage__saveHeaderInfo();
+  const unsigned char ZERO = 0;
+  if (bordered_row_width - real_row_width > 0) {
+    for (int index = 0; index < height; ++index) {
+      fwrite(pixels[height - index - 1], 1, real_row_width, IMAGE);
+      fwrite(&ZERO, 1, bordered_row_width - real_row_width, IMAGE);
+    }
+  } else {
+    for (int index = 0; index < height; ++index) {
+      fwrite(pixels[height - index - 1], 1, real_row_width, IMAGE);
+    }
+  }
+  fclose(IMAGE);
+  IMAGE = nullptr;
 }
 
+void MyImage::saveImage__saveHeaderInfo() {
+  if (IMAGE == nullptr) {
+    return;
+  }
+  const int HEADER_SIZE = 40;
+  const int DATA_OFFSET = 14 + HEADER_SIZE;
+  const short int PLANES_COUNT = 1;
+  const int COMPRESSION = 0;
+  const short int bits_per_pixel = bytes_per_pixel * 8;
+  // const int INFO_HEADER_SIZE = 124;
+  fwrite("BM", 2, 1, IMAGE);
+  int image_size = real_row_width * height;
+  int file_size = image_size + DATA_OFFSET;
+  fwrite(&file_size, 4, 1, IMAGE);
+  const int UNUSED_MEMORY = 0;
+  fwrite(&UNUSED_MEMORY, 4, 1, IMAGE); // Unused memory
+  fwrite(&DATA_OFFSET, 4, 1, IMAGE);
+  fwrite(&HEADER_SIZE, 4, 1, IMAGE);
+  fwrite(&width, 4, 1, IMAGE);
+  fwrite(&height, 4, 1, IMAGE);
+  fwrite(&PLANES_COUNT, 2, 1, IMAGE);
+  fwrite(&bits_per_pixel, 2, 1, IMAGE);
+  fwrite(&COMPRESSION, 4, 1, IMAGE);
+  fwrite(&image_size, 4, 1, IMAGE);
+  fwrite(&UNUSED_MEMORY, 4, 1, IMAGE); // Pixels per meter in X
+  fwrite(&UNUSED_MEMORY, 4, 1, IMAGE); // Pixels per meter in Y
+  fwrite(&UNUSED_MEMORY, 4, 1, IMAGE); // Colors used
+  fwrite(&UNUSED_MEMORY, 4, 1, IMAGE); // Important colours
+}
 void MyImage::setImageWidth() {
 #define WIDTH_OFFSET 0x0012
   fseek(IMAGE, WIDTH_OFFSET, SEEK_SET);
@@ -165,7 +217,7 @@ int MyImage::getImageDataOffset() {
 #undef HEADER_OFFSET
   return image_data_offset;
 }
-void MyImage::setImageBitsPerPixel() {
+void MyImage::setImageBytesPerPixel() {
 #define BITS_PER_PIXEL_OFFSET 0x001C
   short int bits;
   fseek(IMAGE, BITS_PER_PIXEL_OFFSET, SEEK_SET);
@@ -180,6 +232,7 @@ void workWithBMP() {
   test_image.openImage(IMAGE_NAME);
   cout << "Width = " << test_image.getWidth() << '\n';
   cout << "Height = " << test_image.getHeight() << '\n';
+  test_image.saveImage("test.bmp");
 }
 
 bool studentsByName(student& first, student& second) {
