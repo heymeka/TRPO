@@ -11,6 +11,7 @@
 #include <iomanip>
 #include <algorithm>
 #include <ctime>
+#include <random>
 
 using std::cin;
 using std::cout;
@@ -101,7 +102,7 @@ class MyImage {
   int getImageDataOffset();
   void setImageBytesPerPixel();
   void saveImage_saveHeaderInfo();
-
+  void copyImage(MyImage& copy);
  public:
   MyImage();
   MyImage(int init_height, int init_width, int init_bytes_per_color);
@@ -111,6 +112,8 @@ class MyImage {
   int getHeight();
   int getBitsPerPixel();
   MyImage transformToBlackAndWhite(int compress_bits_per_pixel);
+  MyImage addWhiteNoise(int noise_percentage);
+  MyImage addWhiteNoise(double noise_probability);
   MyImage& operator=(const MyImage& new_image);
   void printInfoAboutImage();
   ~MyImage();
@@ -139,10 +142,12 @@ MyImage::MyImage(int init_height, int init_width, int init_bits_per_color) {
   }
 }
 MyImage::~MyImage() {
-  for (int index = 0; index < height; ++index) {
-    delete[] pixels[index];
+  if(pixels != nullptr) {
+    for (int index = 0; index < height; ++index) {
+      delete[] pixels[index];
+    }
+    delete[] pixels;
   }
-  delete[] pixels;
 }
 
 void MyImage::openImage(const string& file_name) {
@@ -210,16 +215,57 @@ MyImage MyImage::transformToBlackAndWhite(int compress_bits_per_pixel) {
   int segment_length = 255 / color_count;
   for (int row = 0; row < height; ++row) {
     for (int col = 0; col < width; ++col) {
-      color = CONST_B_IN_RGB * (int) (pixels[row][col * bytes_per_pixel])
+      color = int(CONST_B_IN_RGB * (int) (pixels[row][col * bytes_per_pixel])
           + CONST_G_IN_RGB * (int) (pixels[row][col * bytes_per_pixel + 1])
           + CONST_R_IN_RGB * (int) (pixels[row][col * bytes_per_pixel + 2])
-          - 0.1;
+          - 0.1);
       color =
           ((color + color % segment_length) / segment_length) * segment_length;
       new_image.pixels[row][col] = (byte) color;
     }
   }
   return new_image;
+}
+
+MyImage MyImage::addWhiteNoise(double noise_probability) {
+  return this->addWhiteNoise((int)(noise_probability * 100));
+}
+
+MyImage MyImage::addWhiteNoise(int noise_percentage) {
+  noise_percentage = std::max(0, std::min(100, noise_percentage));
+  MyImage result_image;
+  this->copyImage(result_image);
+  std::mt19937 rand_seed(time(nullptr));
+  std::uniform_int_distribution<int> generate_rand(0, 99);
+
+  for (int row = 0; row < height; ++row) {
+    for (int col = 0; col < width; ++col) {
+      if(generate_rand(rand_seed) < noise_percentage) {
+        for (int cur_pixel = 0; cur_pixel < bytes_per_pixel; ++cur_pixel) {
+          result_image.pixels[row][col * bytes_per_pixel + cur_pixel] = (byte) 255;
+        }
+      }
+    }
+  }
+  return result_image;
+}
+
+void MyImage::copyImage(MyImage& copy) {
+  copy.height = height;
+  copy.width = width;
+  copy.bits_per_pixel = bits_per_pixel;
+  copy.bytes_per_pixel = bytes_per_pixel;
+  copy.real_row_width = real_row_width;
+  copy.bordered_row_width = bordered_row_width;
+  copy.IMAGE = nullptr;
+
+  copy.pixels = new byte*[height];
+  for (int row = 0; row < height; ++row) {
+    copy.pixels[row] = new byte[real_row_width];
+    for (int col = 0; col < real_row_width; ++col) {
+      copy.pixels[row][col] = pixels[row][col];
+    }
+  }
 }
 
 MyImage& MyImage::operator=(const MyImage& new_image) {
@@ -240,6 +286,7 @@ MyImage& MyImage::operator=(const MyImage& new_image) {
   real_row_width = new_image.real_row_width;
   bordered_row_width = new_image.bordered_row_width;
   pixels = new byte* [height];
+
   for (int row = 0; row < height; ++row) {
     pixels[row] = new byte[real_row_width];
     for (int col = 0; col < real_row_width; ++col) {
@@ -285,7 +332,7 @@ void MyImage::saveImage_saveHeaderInfo() {
     unsigned char write_index;
     unsigned char ZERO = 0;
     int add_value = 1 << (8 - bits_per_pixel);
-    cout << "Add_value = " << add_value << '\n';
+    // cout << "Add_value = " << add_value << '\n';
     for (int index = 0; index < COLOUR_COUNT; index += add_value) {
       write_index = index;
       fwrite(&write_index, 1, 1, IMAGE);
@@ -333,19 +380,34 @@ void MyImage::printInfoAboutImage() {
 }
 
 void workWithBMP() {
-  string IMAGE_NAME = "sample.bmp";
+  std::mt19937 rand_seed(time(nullptr));
+  std::uniform_real_distribution<double> generate_rand(0.10, 0.30);
+
+  const string IMAGE_NAME = "sample.bmp";
   MyImage test_img;
   test_img.openImage(IMAGE_NAME);
-  test_img.saveImage("test.bmp");
+  cout << "Image open from " << IMAGE_NAME << '\n';
 
+  const string original_file = "test.bmp";
+  test_img.saveImage(original_file);
+  cout << "Original image save in " << original_file << '\n';
+
+  int color_bit_count;
   cout << "Enter bit count to convert to grayscale"
        << " (1 - black/white, 8 - full 256 grey colors): ";
-  int color_bit_count;
   cin >> color_bit_count;
-  MyImage greyscale_img = test_img.transformToBlackAndWhite(color_bit_count);
-  greyscale_img.saveImage("test_black_and_white.bmp");
+  // color_bit_count = 3;
 
-  MyImage
+  const string greyscale_file = "greyscale.bmp";
+  MyImage greyscale_img = test_img.transformToBlackAndWhite(color_bit_count);
+  greyscale_img.saveImage(greyscale_file);
+  cout << "Greyscale image save in " << greyscale_file << '\n';
+
+  double noise_percentage = generate_rand(rand_seed);
+  const string noise_file = "noise.bmp";
+  MyImage noise_image = test_img.addWhiteNoise(noise_percentage);
+  noise_image.saveImage(noise_file);
+  cout << "Image with " << (int)(noise_percentage * 100) << "% of white noise save in " << noise_file << '\n';
 }
 
 bool studentsByName(student& first, student& second) {
