@@ -15,6 +15,7 @@
 
 using std::cin;
 using std::cout;
+using std::cerr;
 using std::string;
 using std::map;
 using std::setw;
@@ -103,17 +104,38 @@ class MyImage {
   void setImageBytesPerPixel();
   void saveImage_saveHeaderInfo();
   void copyImage(MyImage& copy);
+  void smoothingImage_FillBufArray(byte* arr,
+                                   int row_size,
+                                   int col_size,
+                                   int cur_row,
+                                   int cur_byte);
+  void smoothingImage_AddColumnToBuf(byte* arr,
+                                     int row_size,
+                                     int col_size,
+                                     int cur_row,
+                                     int cur_col,
+                                     int cur_byte);
+  void smoothingImage_AddRowToBuf(byte* arr,
+                                  int row_size,
+                                  int col_size,
+                                  int cur_row,
+                                  int cur_col,
+                                  int cur_byte);
+  void smoothingImage_FillAngleValue(int cur_row, int cur_col, int radius, int pixel_byte);
+  byte smoothingImage_GetMedianOfArray(byte* arr, int row_size, int col_size);
  public:
   MyImage();
   MyImage(int init_height, int init_width, int init_bytes_per_color);
+  MyImage(const MyImage& obj);
   void openImage(const string& file_name);
   void saveImage(const string& file_name);
   int getWidth();
   int getHeight();
   int getBitsPerPixel();
-  MyImage transformToBlackAndWhite(int compress_bits_per_pixel);
+  MyImage greyscaleImage(int compress_bits_per_pixel);
   MyImage addWhiteNoise(int noise_percentage);
   MyImage addWhiteNoise(double noise_probability);
+  MyImage smoothingImage(int smoothing_radius);
   MyImage& operator=(const MyImage& new_image);
   void printInfoAboutImage();
   ~MyImage();
@@ -141,12 +163,30 @@ MyImage::MyImage(int init_height, int init_width, int init_bits_per_color) {
     pixels[row] = new byte[real_row_width];
   }
 }
+MyImage::MyImage(const MyImage& obj) {
+  width = obj.width;
+  height = obj.height;
+  real_row_width = obj.real_row_width;
+  bordered_row_width = obj.bordered_row_width;
+  bytes_per_pixel = obj.bytes_per_pixel;
+  bits_per_pixel = obj.bits_per_pixel;
+  IMAGE = obj.IMAGE;
+  pixels = new byte* [obj.height];
+  for (int index = 0; index < height; ++index) {
+    pixels[index] = new byte[real_row_width];
+    for (int j = 0; j < real_row_width; j++) {
+      pixels[index][j] = obj.pixels[index][j];
+    }
+  }
+}
+
 MyImage::~MyImage() {
-  if(pixels != nullptr) {
+  if (pixels != nullptr) {
     for (int index = 0; index < height; ++index) {
       delete[] pixels[index];
     }
     delete[] pixels;
+    pixels = nullptr;
   }
 }
 
@@ -184,6 +224,7 @@ void MyImage::saveImage(const string& file_name) {
   IMAGE = fopen(file_name.c_str(), "wb");
   this->saveImage_saveHeaderInfo();
   const unsigned char ZERO = 0;
+
   if (bordered_row_width - real_row_width > 0) {
     for (int index = 0; index < height; ++index) {
       fwrite(pixels[height - index - 1], 1, real_row_width, IMAGE);
@@ -198,7 +239,121 @@ void MyImage::saveImage(const string& file_name) {
   IMAGE = nullptr;
 }
 
-MyImage MyImage::transformToBlackAndWhite(int compress_bits_per_pixel) {
+MyImage MyImage::smoothingImage(int smoothing_radius) {
+  if (smoothing_radius > 10) {
+    smoothing_radius = 10;
+  }
+  int row_size = 2 * smoothing_radius - 1;
+  int matrix_size = row_size * row_size;
+  if (smoothing_radius < 2 || width * height < matrix_size) {
+    return *this;
+  }
+  MyImage result_image;
+
+  this->copyImage(result_image);
+
+  byte* buf_arr = new byte[matrix_size];
+
+  int min_cur = smoothing_radius - 1;
+  int max_height = height - min_cur;
+  int max_width = width - min_cur;
+  int angle_size = min_cur * min_cur;
+  byte* buf_angle = new byte[angle_size];
+  int angle_mid = angle_size / 2;
+  for (int pixel_byte = 0; pixel_byte < bytes_per_pixel; ++pixel_byte) {
+    // top left angle
+    result_image.smoothingImage_FillAngleValue(0, 0, smoothing_radius, pixel_byte);
+    // top right angle
+    result_image.smoothingImage_FillAngleValue(0, max_width, smoothing_radius, pixel_byte);
+    // bottom left angle
+    result_image.smoothingImage_FillAngleValue(max_height, 0, smoothing_radius, pixel_byte);
+    // bottom right angle
+    result_image.smoothingImage_FillAngleValue(max_height, max_width, smoothing_radius, pixel_byte);
+
+    // top side
+    for (int cur_row = 0; cur_row < min_cur; ++cur_row) {
+      int row_count = cur_row + 1;
+      smoothingImage_FillBufArray(buf_arr,
+                                  row_count,
+                                  row_size,
+                                  cur_row,
+                                  pixel_byte);
+      for (int cur_col = min_cur; cur_col < max_width; ++cur_col) {
+        smoothingImage_AddColumnToBuf(buf_arr,
+                                      row_count,
+                                      row_size,
+                                      cur_row,
+                                      cur_col,
+                                      pixel_byte);
+        result_image.pixels[cur_row][cur_col * bytes_per_pixel + pixel_byte] =
+            smoothingImage_GetMedianOfArray(buf_arr, row_count, row_size);
+      }
+    }
+    // bottom side
+    for (int cur_row = max_height; cur_row < height; ++cur_row) {
+      int row_count = height - cur_row;
+      smoothingImage_FillBufArray(buf_arr,
+                                  row_count,
+                                  row_size,
+                                  cur_row,
+                                  pixel_byte);
+      for (int cur_col = min_cur; cur_col < max_width; ++cur_col) {
+        smoothingImage_AddColumnToBuf(buf_arr,
+                                      row_count,
+                                      row_size,
+                                      cur_row,
+                                      cur_col,
+                                      pixel_byte);
+        result_image.pixels[cur_row][cur_col * bytes_per_pixel + pixel_byte] =
+            smoothingImage_GetMedianOfArray(buf_arr, row_count, row_size);
+      }
+    }
+    // left side
+    for (int cur_col = 0; cur_col < min_cur; ++cur_col) {
+      int col_count = cur_col + 1;
+      smoothingImage_FillBufArray(buf_arr, row_size, col_count, min_cur, pixel_byte);
+      for (int cur_row = min_cur; cur_row < max_height; ++cur_row) {
+        smoothingImage_AddRowToBuf(buf_arr, row_size, col_count, cur_row, cur_col, pixel_byte);
+        result_image.pixels[cur_row][cur_col * bytes_per_pixel + pixel_byte] =
+            smoothingImage_GetMedianOfArray(buf_arr, row_size, col_count);
+      }
+    }
+    // right side
+    for (int cur_col = max_width; cur_col < width; ++cur_col) {
+      int col_count = width - cur_col;
+      smoothingImage_FillBufArray(buf_arr, row_size, col_count, min_cur, pixel_byte);
+      for (int cur_row = min_cur; cur_row < max_height; ++cur_row) {
+        smoothingImage_AddRowToBuf(buf_arr, row_size, col_count, cur_row, cur_col, pixel_byte);
+        result_image.pixels[cur_row][cur_col * bytes_per_pixel + pixel_byte] =
+            smoothingImage_GetMedianOfArray(buf_arr, row_size, col_count);
+      }
+    }
+    // Center
+    for (int cur_row = min_cur; cur_row < max_height; ++cur_row) {
+      int cur_row_size = std::min(smoothing_radius + cur_row, row_size);
+      smoothingImage_FillBufArray(buf_arr,
+                                  cur_row_size,
+                                  row_size,
+                                  cur_row - min_cur,
+                                  pixel_byte);
+      for (int cur_col = min_cur; cur_col < max_width; ++cur_col) {
+        smoothingImage_AddColumnToBuf(buf_arr,
+                                      cur_row_size,
+                                      row_size,
+                                      cur_row - min_cur,
+                                      cur_col,
+                                      pixel_byte);
+        result_image.pixels[cur_row][cur_col * bytes_per_pixel + pixel_byte] =
+            smoothingImage_GetMedianOfArray(buf_arr, cur_row_size, row_size);
+      }
+
+    }
+  }
+  delete[] buf_arr;
+  return result_image;
+}
+
+MyImage MyImage::greyscaleImage(int compress_bits_per_pixel) {
   compress_bits_per_pixel = std::min(8, compress_bits_per_pixel);
   compress_bits_per_pixel = std::max(1, compress_bits_per_pixel);
   if (bits_per_pixel != 24) {
@@ -216,9 +371,11 @@ MyImage MyImage::transformToBlackAndWhite(int compress_bits_per_pixel) {
   for (int row = 0; row < height; ++row) {
     for (int col = 0; col < width; ++col) {
       color = int(CONST_B_IN_RGB * (int) (pixels[row][col * bytes_per_pixel])
-          + CONST_G_IN_RGB * (int) (pixels[row][col * bytes_per_pixel + 1])
-          + CONST_R_IN_RGB * (int) (pixels[row][col * bytes_per_pixel + 2])
-          - 0.1);
+                      + CONST_G_IN_RGB
+                          * (int) (pixels[row][col * bytes_per_pixel + 1])
+                      + CONST_R_IN_RGB
+                          * (int) (pixels[row][col * bytes_per_pixel + 2])
+                      - 0.1);
       color =
           ((color + color % segment_length) / segment_length) * segment_length;
       new_image.pixels[row][col] = (byte) color;
@@ -228,7 +385,7 @@ MyImage MyImage::transformToBlackAndWhite(int compress_bits_per_pixel) {
 }
 
 MyImage MyImage::addWhiteNoise(double noise_probability) {
-  return this->addWhiteNoise((int)(noise_probability * 100));
+  return this->addWhiteNoise((int) (noise_probability * 100));
 }
 
 MyImage MyImage::addWhiteNoise(int noise_percentage) {
@@ -240,9 +397,10 @@ MyImage MyImage::addWhiteNoise(int noise_percentage) {
 
   for (int row = 0; row < height; ++row) {
     for (int col = 0; col < width; ++col) {
-      if(generate_rand(rand_seed) < noise_percentage) {
+      if (generate_rand(rand_seed) < noise_percentage) {
         for (int cur_pixel = 0; cur_pixel < bytes_per_pixel; ++cur_pixel) {
-          result_image.pixels[row][col * bytes_per_pixel + cur_pixel] = (byte) 255;
+          result_image.pixels[row][col * bytes_per_pixel + cur_pixel] =
+              (byte) 255;
         }
       }
     }
@@ -259,7 +417,7 @@ void MyImage::copyImage(MyImage& copy) {
   copy.bordered_row_width = bordered_row_width;
   copy.IMAGE = nullptr;
 
-  copy.pixels = new byte*[height];
+  copy.pixels = new byte* [height];
   for (int row = 0; row < height; ++row) {
     copy.pixels[row] = new byte[real_row_width];
     for (int col = 0; col < real_row_width; ++col) {
@@ -296,6 +454,76 @@ MyImage& MyImage::operator=(const MyImage& new_image) {
   return *this;
 }
 
+void MyImage::smoothingImage_FillBufArray(byte* arr,
+                                          int row_size,
+                                          int col_size,
+                                          int cur_row,
+                                          int cur_byte) {
+  for (int row = 0; row < row_size; ++row) {
+    for (int col = 0; col < col_size; ++col) {
+      arr[row * col_size + col] =
+          pixels[cur_row + row][col * bytes_per_pixel + cur_byte];
+    }
+  }
+}
+void MyImage::smoothingImage_AddColumnToBuf(byte* arr,
+                                            int row_size,
+                                            int col_size,
+                                            int cur_row,
+                                            int cur_col,
+                                            int cur_byte) {
+  int buf_col = cur_col % col_size;
+  cur_col = cur_col * bytes_per_pixel + cur_byte;
+  for (int row = 0; row < row_size; ++row) {
+    arr[row * col_size + buf_col] = pixels[row + cur_row][cur_col];
+  }
+}
+
+void MyImage::smoothingImage_AddRowToBuf(byte* arr,
+                                         int row_size,
+                                         int col_size,
+                                         int cur_row,
+                                         int cur_col,
+                                         int cur_byte) {
+  int buf_row = cur_row % row_size;
+  cur_col = cur_col * bytes_per_pixel + cur_byte;
+  for (int col = 0; col < col_size; ++col) {
+    arr[buf_row * col_size + col] = pixels[cur_row][cur_col + col * bytes_per_pixel];
+  }
+
+}
+
+void MyImage::smoothingImage_FillAngleValue(int cur_row, int cur_col, int radius, int pixel_byte) {
+  radius--;
+  int buf_size = radius * radius;
+  byte* buf = new byte[buf_size];
+  for (int row = 0; row < radius; ++row) {
+    for (int col = 0; col < radius; ++col) {
+      buf[row * radius + col] = pixels[cur_row + row][(cur_col + col) * bytes_per_pixel + pixel_byte];
+    }
+  }
+  sort(buf, buf + buf_size);
+  int mid = buf_size / 2;
+  for (int row = 0; row < radius; ++row) {
+    for (int col = 0; col < radius; ++col) {
+      pixels[cur_row + row][(cur_col + col) * bytes_per_pixel + pixel_byte] = buf[mid];
+    }
+  }
+  delete[] buf;
+}
+byte MyImage::smoothingImage_GetMedianOfArray(byte* arr,
+                                              int row_size,
+                                              int col_size) {
+  int full_size = row_size * col_size;
+  byte* buf_arr = new byte[full_size];
+  for (int index = 0; index < full_size; ++index) {
+    buf_arr[index] = arr[index];
+  }
+  sort(buf_arr, buf_arr + full_size);
+  byte median = buf_arr[full_size / 2];
+  delete[] buf_arr;
+  return median;
+}
 void MyImage::saveImage_saveHeaderInfo() {
   if (IMAGE == nullptr) {
     return;
@@ -332,7 +560,6 @@ void MyImage::saveImage_saveHeaderInfo() {
     unsigned char write_index;
     unsigned char ZERO = 0;
     int add_value = 1 << (8 - bits_per_pixel);
-    // cout << "Add_value = " << add_value << '\n';
     for (int index = 0; index < COLOUR_COUNT; index += add_value) {
       write_index = index;
       fwrite(&write_index, 1, 1, IMAGE);
@@ -389,25 +616,35 @@ void workWithBMP() {
   cout << "Image open from " << IMAGE_NAME << '\n';
 
   const string original_file = "test.bmp";
-  test_img.saveImage(original_file);
+  // test_img.saveImage(original_file);
   cout << "Original image save in " << original_file << '\n';
 
   int color_bit_count;
-  cout << "Enter bit count to convert to grayscale"
-       << " (1 - black/white, 8 - full 256 grey colors): ";
-  cin >> color_bit_count;
-  // color_bit_count = 3;
+  // cout << "Enter bit count to convert to grayscale"
+  //      << " (1 - black/white, 8 - full 256 grey colors): ";
+  // cin >> color_bit_count;
+  color_bit_count = 5;
 
   const string greyscale_file = "greyscale.bmp";
-  MyImage greyscale_img = test_img.transformToBlackAndWhite(color_bit_count);
-  greyscale_img.saveImage(greyscale_file);
+  MyImage greyscale_img = test_img.greyscaleImage(color_bit_count);
+  // greyscale_img.saveImage(greyscale_file);
   cout << "Greyscale image save in " << greyscale_file << '\n';
 
   double noise_percentage = generate_rand(rand_seed);
   const string noise_file = "noise.bmp";
-  MyImage noise_image = test_img.addWhiteNoise(noise_percentage);
+  MyImage noise_image;
+  noise_image = test_img.addWhiteNoise(noise_percentage);
   noise_image.saveImage(noise_file);
-  cout << "Image with " << (int)(noise_percentage * 100) << "% of white noise save in " << noise_file << '\n';
+  cout << "Image with " << (int) (noise_percentage * 100)
+       << "% of white noise save in " << noise_file << '\n';
+
+  const string smoothing_file = "smoothing.bmp";
+  int smoothing_radius = 2;
+  cout << "Smoothing image...\n";
+  MyImage smoothing_image = noise_image.smoothingImage(smoothing_radius);
+  cout << "Successful smoothing\n";
+  smoothing_image.saveImage(smoothing_file);
+  cout << "Smoothing image save in " << smoothing_file << '\n';
 }
 
 bool studentsByName(student& first, student& second) {
