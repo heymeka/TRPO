@@ -6,9 +6,7 @@
       |          *** All rights reserved ***            |
       ---------------------------------------------------
                                             			**/
-
-#ifndef USER_H
-#define USER_H
+#pragma once
 
 #include <iostream>
 
@@ -48,4 +46,3 @@ class User {
   bool operator==(const User& second);
 };
 
-#endif //USER_H

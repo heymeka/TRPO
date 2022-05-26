@@ -162,7 +162,8 @@ User& User::operator=(const User& copy) {
   username = copy.username;
   password = copy.password;
   status = copy.status;
-};
+  return *this;
+}
 
 bool User::operator==(const User& second) {
   return (CheckPassword(second.GetPassword()) && CheckUsername(second.GetUsername()));

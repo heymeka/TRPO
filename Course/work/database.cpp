@@ -10,6 +10,7 @@
 #include "database.h"
 #include <algorithm>
 #include <fstream>
+#include <iomanip>
 
 const std::string RESERVE_DATABASE = "Reserve";
 const std::string STUDENTS_DATABASE = "Students";
@@ -103,7 +104,6 @@ bool Database::EncryptDatabaseStudents(const std::string& filename) {
   students_size = EncryptInt(students_size);
 
   fwrite(&students_size, 4, 1, fin);
-
   for (auto& cur_student: students) {
     activity_buf = EncryptBool(cur_student.GetActivity());
     fwrite(&activity_buf, 1, 1, fin);
@@ -121,7 +121,6 @@ bool Database::EncryptDatabaseStudents(const std::string& filename) {
 
   }
   fclose(fin);
-
   return true;
 }
 
@@ -156,9 +155,14 @@ bool Database::DecryptDatabaseStudents(const std::string& filename) {
 
   fread(&students_size, 4, 1, fin);
   students_size = EncryptInt(students_size);
+  // students_size = 10;
   if (students_size < 0 || students_size > 100000) {
     fclose(fin);
     return false;
+  }
+  if(students_size == 0) {
+    fclose(fin);
+    return true;
   }
   students.resize(students_size);
   for (auto& cur_student: students) {
@@ -204,6 +208,7 @@ bool Database::EncryptDatabaseUsers(const std::string& filename) {
   if (fin == nullptr) {
     return false;
   }
+
   int users_size = users.size();
   long long password_buf;
   int status_buf;
@@ -222,6 +227,7 @@ bool Database::EncryptDatabaseUsers(const std::string& filename) {
 
     WriteString(cur_user.GetUsername(), fin);
   }
+
   fclose(fin);
   return true;
 }
@@ -249,6 +255,10 @@ bool Database::DecryptDatabaseUsers(const std::string& filename) {
   if (users_size < 0 || users_size > 100000) {
     fclose(fin);
     return false;
+  }
+  if(users_size == 0) {
+    fclose(fin);
+    return true;
   }
   users.resize(users_size);
 
@@ -287,8 +297,10 @@ Database::Database(Database& second) {
 bool Database::OpenDatabase(const std::string& filename) {
   if (!(DecryptDatabaseStudents(filename) &&
       DecryptDatabaseUsers(filename))) {
-    users.emplace_back("admin", "admin", ADMIN_STATUS);
     return false;
+  }
+  if (users.size() == 0) {
+    users.emplace_back("admin", "admin", ADMIN_STATUS);
   }
   return true;
 }
@@ -345,9 +357,7 @@ bool Database::AddUser(const std::string& new_username,
 }
 
 bool Database::DeleteStudent(int number, User& current_user) {
-  if (current_user.GetStatus() != ADMIN_STATUS) {
-    return false;
-  } else if (number < students.size()) {
+  if (current_user.GetStatus() == ADMIN_STATUS && number < students.size()) {
     students.erase(students.begin() + number);
     return true;
   } else {
@@ -356,7 +366,7 @@ bool Database::DeleteStudent(int number, User& current_user) {
 }
 
 bool Database::DeleteUser(int number, User& current_user) {
-  if (current_user.GetStatus() != ADMIN_STATUS) {
+  if (current_user.GetStatus() != ADMIN_STATUS || users.size() < 2) {
     return false;
   } else if (number < users.size()) {
     users.erase(users.begin() + number);
@@ -365,6 +375,7 @@ bool Database::DeleteUser(int number, User& current_user) {
     return false;
   }
 }
+
 
 bool SortComparatorStudentsByName(Student& first, Student& second) {
   if (first.GetSurname() != second.GetSurname()) {
@@ -424,6 +435,7 @@ bool SortComparatorUsersByUsername(User& first, User& second) {
 bool SortComparatorUsersByPriority(User& first, User& second) {
   return first.GetStatus() > second.GetStatus();
 }
+
 
 bool Database::SortStudents(int type, bool is_reverse) {
   if (type == SORT_BY_NAME) {
@@ -487,11 +499,12 @@ int Database::FindUserAndGetStatus(const User& curr) {
   return ERROR_STATUS;
 }
 
-int Database::FindUserAndGetStatus(const std::string& username, const std::string& password) {
+int Database::FindUserAndGetStatus(const std::string& username,
+                                   const std::string& password) {
   return FindUserAndGetStatus(User(username, password, ERROR_STATUS));
 }
 
-bool Database::IsUserAdmin(const User& curr_user) {
+bool Database::IsUserAdmin(const User& curr_user) const {
   return curr_user.GetStatus() == ADMIN_STATUS;
 }
 
@@ -501,51 +514,78 @@ bool Database::SetStatusToUser(User& current) {
   return status != ERROR_STATUS;
 }
 
+bool Database::PrintAllStudents(std::ostream& out) {
+  const int NUMBER_SPACE = 4;
+  const int SPACE = 16;
+  const std::string TABLE = " | ";
+  const std::string NUMBER = "#";
+  const std::string FULLNAME = "Full name";
+  const std::string GROUP = "Group";
+  const std::string AVERAGE = "Average";
+  const std::string ACTIVITY = "Activity";
+  const std::string WAGES = "Wages per person";
+  const std::string MINIMAL_WAGES_INFO = "\nMinimal wages: ";
+  out << std::setw(NUMBER_SPACE) << NUMBER << TABLE
+      << std::setw(2 * SPACE) << FULLNAME << TABLE
+      << std::setw(SPACE) << GROUP << TABLE
+      << std::setw(SPACE) << AVERAGE << TABLE
+      << std::setw(ACTIVITY.size()) << ACTIVITY << TABLE
+      << std::setw(SPACE) << WAGES << TABLE << '\n';
+  int cnt = 0;
+  for (auto& current: students) {
+    out << std::setw(NUMBER_SPACE) << ++cnt << TABLE
+        << std::setw(2 * SPACE) << current.GetFullName() << TABLE
+        << std::setw(SPACE) << current.GetGroup() << TABLE
+        << std::setw(SPACE) << current.GetAverage() << TABLE
+        << std::setw(ACTIVITY.size()) << current.GetActivity() << TABLE
+        << std::setw(SPACE) << current.GetWagesPerPerson() << TABLE << '\n';
+  }
+  std::cout << MINIMAL_WAGES_INFO << MINIMAL_WAGES << "\n";
+  return true;
+}
+
+bool Database::PrintAllUsers(std::ostream& out,
+                             User& current_user,
+                             const int SPACE) {
+  const int NUMBER_SIZE = 4;
+  const std::string TABLE = " | ";
+  const std::string USER_NUMBER = "#";
+  const std::string USER_USERNAME = "Username";
+  const std::string USER_STATUS = "Status";
+  if (current_user.GetStatus() == ADMIN_STATUS) {
+    out << std::setw(NUMBER_SIZE) << USER_NUMBER << TABLE
+        << std::setw(SPACE) << USER_USERNAME << TABLE
+        << std::setw(SPACE) << USER_STATUS << TABLE << '\n';
+    int cnt = 1;
+    for (auto& current: users) {
+      out << std::setw(NUMBER_SIZE) << cnt++ << TABLE
+          << std::setw(SPACE) << current.GetUsername() << TABLE
+          << std::setw(SPACE) << current.GetStatus() << TABLE << '\n';
+    }
+  }
+  return true;
+}
+
+int Database::GetAdminStatus(const User &current_user) const {
+  if(IsUserAdmin(current_user)) {
+    return ADMIN_STATUS;
+  } else {
+    return ERROR_STATUS;
+  }
+}
+
+int Database::GetUserStatus(const User& current_user) const {
+  if(IsUserAdmin(current_user)) {
+    return DEFAULT_USER_STATUS;
+  } else {
+    return ERROR_STATUS;
+  }
+}
+
+int Database::GetErrorStatus(const User& current_user) const {
+  return ERROR_STATUS;
+}
+
 Database::~Database() {
   SaveDatabase("Work");
 }
-
-////////////////
-/*
-template<class T>
-void Database::MergeVectors(std::vector<T>& first, std::vector<T>& second, std::vector<T>& result, bool Comparator(T&, T&)) {
-  int left = 0;
-  int right = 0;
-  int first_size = first.size();
-  int second_size = second.size();
-  while(left < first_size && right < second_size) {
-    if(Comparator(first[left], second[right])) {
-      result[left + right] = first[left];
-      left++;
-    } else {
-      result[left + right] = second[right];
-      right++;
-    }
-  }
-  while(left < first_size) {
-    result[left + right] = first[left];
-    left++;
-  }
-  while(right < second_size) {
-    result[left + right] = second[right];
-    right++;
-  }
-}
-template<class T>
-void Database::SortVector(std::vector<T>& sort_vector, bool Comparator(T&, T&)) {
-  int size = sort_vector.size();
-  if(sort_vector.size() < 32) {
-    for(int first = 1; first < size; first++)
-    {
-      for(int second = first; second > 0 && Comparator(sort_vector[second - 1], sort_vector[second]); second--)
-        sort_vector[second - 1].swap(sort_vector[second]);
-    }
-  } else {
-    std::vector<T> first_half(sort_vector.begin(), sort_vector.begin() + size / 2);
-    std::vector<T> second_half(sort_vector.begin() + size / 2, sort_vector.end());
-    SortVector(first_half, Comparator);
-    SortVector(second_half, Comparator);
-    MergeVectors(first_half, second_half, sort_vector, Comparator);
-  }
-}
-*/

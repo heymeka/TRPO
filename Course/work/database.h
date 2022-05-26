@@ -6,18 +6,16 @@
       |          *** All rights reserved ***            |
       ---------------------------------------------------
                                             			**/
-
-#ifndef DATABASE_H
-#define DATABASE_H
+#pragma once
 #include "student.h"
 #include "user.h"
 #include <vector>
 
 class Database {
- // private:
- public:
+ private:
+  // public:
   const long long ENCRYPT_CONST_STUDENTS = 6171494297548927679ll;
-  const long long ENCRYPT_CONST_USERS  =  2343948959754927671ll;
+  const long long ENCRYPT_CONST_USERS = 2343948959754927671ll;
   const int ADMIN_STATUS = 100;
   const int DEFAULT_USER_STATUS = 1;
   const int ERROR_STATUS = -1;
@@ -29,7 +27,8 @@ class Database {
   bool DecryptDatabaseStudents(const std::string& filename);
   bool DecryptDatabaseUsers(const std::string& filename);
   int FindUserAndGetStatus(const User& curr);
-  int FindUserAndGetStatus(const std::string& username, const std::string& password);
+  int FindUserAndGetStatus(const std::string& username,
+                           const std::string& password);
  public:
   const int SORT_BY_NAME = 1;
   const int SORT_BY_PRIORITY = 2;
@@ -61,8 +60,13 @@ class Database {
   double GetMinimalWages();
   bool SortStudents(int type, bool is_reverse);
   bool SortUsers(int type, bool is_reverse);
-  bool IsUserAdmin(const User& curr_user);
+  bool IsUserAdmin(const User& curr_user) const;
   bool SetStatusToUser(User& current);
+  bool PrintAllStudents(std::ostream& out);
+  bool PrintAllUsers(std::ostream& out,
+                     User& current_user,
+                     const int SPACE);
+  int GetAdminStatus(const User &current_user) const;
+  int GetUserStatus(const User &current_user) const;
+  int GetErrorStatus(const User &current_user) const;
 };
-
-#endif //DATABASE_H

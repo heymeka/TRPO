@@ -6,9 +6,7 @@
       |          *** All rights reserved ***            |
       ---------------------------------------------------
                                             			**/
-
-#ifndef STUDENT_H
-#define STUDENT_H
+#pragma once
 
 #include <iostream>
 
@@ -53,5 +51,3 @@ class Student {
   Student& operator=(const Student& copy);
   bool operator==(const Student& second);
 };
-
-#endif //STUDENT_H
