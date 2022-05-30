@@ -131,23 +131,23 @@ std::string Student::GetSecondName() {
   return second_name;
 }
 
-std::string Student::GetGroup() {
+std::string Student::GetGroup() const {
   return group;
 }
 
-bool Student::GetActivity() {
+bool Student::GetActivity() const {
   return activity;
 }
 
-double Student::GetAverage() {
+double Student::GetAverage() const {
   return average;
 }
 
-double Student::GetWagesPerPerson() {
+double Student::GetWagesPerPerson() const {
   return wages_per_person;
 }
 
-std::string Student::GetFullName() {
+std::string Student::GetFullName() const {
   return surname + " " + name + " " + second_name;
 }
 

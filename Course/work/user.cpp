@@ -56,6 +56,7 @@ void User::swap(User& second) {
   username.swap(second.username);
 }
 
+// Получение "сырого" числового хеша из строки
 long long User::CreateHashPassword(const std::string& new_password) const {
   const long long hash_const_first = 958038479;
   const long long hash_const_second = 1013572099;
@@ -73,6 +74,7 @@ long long User::CreateHashPassword(const std::string& new_password) const {
   return hash_first * (11 * hash_const_second - 7 * hash_const_first) + hash_second * (13 * hash_const_first + 5 * hash_const_second);
 }
 
+// Дополнение пароля солью
 std::string User::GetSaltPassword(std::string new_password) const {
   srand(CreateHashPassword(new_password));
   const int SALT_SIZE = 15;
@@ -82,6 +84,7 @@ std::string User::GetSaltPassword(std::string new_password) const {
   return new_password;
 }
 
+// Окончательное получение хеша
 long long User::GetPassword(const std::string& new_password) const {
   return CreateHashPassword(GetSaltPassword(new_password));
 }

@@ -17,25 +17,32 @@ class Interface {
   //////// Main
   const char MENU_EXIT_ANSWER = '0';
   const std::string ENTER = "Enter ";
+  const std::string TOTAL_EXIT = ENTER + MENU_EXIT_ANSWER + " to close program\n";
   const std::string MENU_EXIT = ENTER + MENU_EXIT_ANSWER + " to exit menu\n";
   const std::string ANOTHER_TO_CONTINUE = "Enter another to continue\n";
   const std::string POSITION_DELETE_MENU = "Enter position to delete\n";
   const std::string POSITION_CHANGE_MENU = "Enter position to change\n";
+  const std::string REPEAT_POSITION_TO_DELETE = "Repeat position to delete\n";
 
   const std::string ENTER_ONLY_LETTERS = "(Enter only letters)\n";
   const std::string ENTER_CORRECT_GROUP = "(Enter 6 digits, example: 123456)\n";
   const std::string ENTER_CORRECT_AVERAGE = "(Enter 0..10)\n";
   const std::string ENTER_CORRECT_ACTIVITY = "(Enter 0 or 1)\n";
   const std::string ENTER_CORRECT_WAGES = "(Enter > 0)\n";
+  const std::string SUCCESSFUL = "SUCCESSFUL\n";
+  const std::string ERROR = "ERROR\n";
+  const std::string NOT_FOUND = "Not founded\n";
+  //////// Start
+  const std::string ARE_YOU_SURE_EXIT = "Are you sure about the exit?\n";
+  const std::string MENU_LOGIN = ENTER + "another to login\n";
   //////// Main menu
  private:
   const char MAIN_MENU_STUDENTS_ANSWER = '1';
   const char MAIN_MENU_USERS_ANSWER = '2';
-  const char MAIN_MENU_LOGOUT_ANSWER = '1';
+
   const std::string MAIN_MENU_STUDENTS = ENTER + MAIN_MENU_STUDENTS_ANSWER + " to show students\n";
   const std::string MAIN_MENU_USERS = ENTER + MAIN_MENU_USERS_ANSWER + " to show users\n";
-  const std::string MAIN_MENU_EXIT = ENTER + MENU_EXIT_ANSWER + " to close program\n";
-  const std::string MAIN_MENU_LOGOUT = ENTER + MAIN_MENU_LOGOUT_ANSWER + " to logout\n";
+  const std::string MAIN_MENU_EXIT = ENTER + MENU_EXIT_ANSWER + " to logout\n";
   const std::string MAIN_MENU_GO_BACK = "Enter another to back\n";
   //////// Login menu
  private:
@@ -71,23 +78,23 @@ class Interface {
   const std::string USERS_SORT_PRIORITY = ENTER + USERS_SORT_PRIORITY_ANSWER + " to sort users by priority\n";
 
   const std::string USERS_ADD_STATUS = "Status: ";
-
+  const std::string REDACTING_USER = "Redacting user: \n";
   //////// Sort
   const char REVERSE_SORT_ANSWER = '1';
-  const std::string REVERSE_SORT_MENU_REVERSE = ENTER + REVERSE_SORT_ANSWER + " to reverse sort\n";
-  const std::string REVERSE_SORT_MENU_DIR = "Enter another symbol to direct sort\n";
+  const std::string REVERSE_SORT_MENU_REVERSE = ENTER + REVERSE_SORT_ANSWER + " to reverse sort (Z - A)\n";
+  const std::string REVERSE_SORT_MENU_DIR = "Enter another symbol to direct sort (A - Z)\n";
 
   //////// Students menu
   const char STUDENTS_SORT_ANSWER = '1';
   const char STUDENTS_WAGES_ANSWER = '2';
-  ///
+  const char STUDENTS_SEARCH_ANSWER = '3';
   const char STUDENTS_CHANGE_ANSWER = '4';
   const char STUDENTS_ADD_ANSWER = '5';
   const char STUDENTS_DELETE_ANSWER = '6';
 
   const std::string STUDENTS_MENU_SORT = ENTER + STUDENTS_SORT_ANSWER + " to sort students\n";
   const std::string STUDENTS_MENU_WAGES = ENTER + STUDENTS_WAGES_ANSWER + " to change minimal wages per person\n";
-  ///
+  const std::string STUDENTS_MENU_SEARCH = ENTER + STUDENTS_SEARCH_ANSWER + " to search students\n";
   const std::string STUDENTS_MENU_CHANGE = ENTER + STUDENTS_CHANGE_ANSWER + " to change student info\n";
   const std::string STUDENTS_MENU_ADD = ENTER + STUDENTS_ADD_ANSWER + " to add student\n";
   const std::string STUDENTS_MENU_DELETE = ENTER + STUDENTS_DELETE_ANSWER + " to delete student\n";
@@ -108,6 +115,15 @@ class Interface {
   const std::string STUDENTS_SORT_AVERAGE = ENTER + STUDENTS_SORT_AVERAGE_ANSWER + " to sort students by average\n";
   const std::string STUDENTS_SORT_GROUP = ENTER + STUDENTS_SORT_GROUP_ANSWER + " to sort students by group\n";
   const std::string STUDENTS_SORT_PRIORITY = ENTER + STUDENTS_SORT_PRIORITY_ANSWER + " to sort students by priority in dormitory (wages < 2min, average, activity)\n";
+
+  const char STUDENTS_SEARCH_NAME_ANSWER = '1';
+  const char STUDENTS_SEARCH_GROUP_ANSWER = '2';
+  const std::string STUDENTS_SEARCH_NAME = ENTER + STUDENTS_SEARCH_NAME_ANSWER + " to find by name\n";
+  const std::string STUDENTS_SEARCH_GROUP = ENTER + STUDENTS_SEARCH_GROUP_ANSWER + " to find by group\n";
+  const std::string STUDENTS_SEARCH_ENTER_NAME = ENTER + " name to find:\n";
+  const std::string STUDENTS_SEARCH_ENTER_GROUP = ENTER + " group to find:\n";
+
+  const std::string REDACTING_STUDENT = "Redacting student:\n";
  private:
   ////////
   std::string LoginError();
@@ -118,6 +134,7 @@ class Interface {
   bool StudentsAddMenu();
   bool StudentsDeleteMenu();
   bool StudentsWagesMenu();
+  bool StudentFindMenu();
 
   bool AuthorizationMenu();
   bool MainMenu();
@@ -129,6 +146,9 @@ class Interface {
   bool UsersAddMenu();
   bool UsersChangeMenu();
   bool UsersDeleteMenu();
+
+  bool PrintResult(bool result);
+  bool StartOrExitMenu();
  public:
   bool Start();
 };

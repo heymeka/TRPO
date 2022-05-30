@@ -11,6 +11,7 @@
 #include <conio.h>
 #include <iomanip>
 
+// Начало работы
 bool Interface::Start() {
   const std::string database_file = "Work";
 
@@ -21,12 +22,15 @@ bool Interface::Start() {
   }
   system("cls");
   while (true) {
-    if (!AuthorizationMenu()) {
-      system("cls");
-      std::cout << LoginError() << '\n';
-      continue;
-    }
-    if (!MainMenu()) {
+    if(StartOrExitMenu()) {
+      if (!AuthorizationMenu()) {
+        system("cls");
+        std::cout << LoginError() << '\n';
+        system("pause");
+        continue;
+      }
+      MainMenu();
+    } else {
       break;
     }
   }
@@ -34,11 +38,28 @@ bool Interface::Start() {
   return true;
 }
 
+bool Interface::StartOrExitMenu() {
+  system("cls");
+  std::cout << TOTAL_EXIT;
+  std::cout << MENU_LOGIN;
+  char user_answer = getch();
+  if(user_answer == MENU_EXIT_ANSWER) {
+    system("cls");
+    std::cout << ARE_YOU_SURE_EXIT;
+    std::cout << TOTAL_EXIT;
+    std::cout << MENU_LOGIN;
+    user_answer = getch();
+  }
+  system("cls");
+  return (user_answer != MENU_EXIT_ANSWER);
+}
+
 std::string Interface::LoginError() {
   return LOGIN_ERROR_MAIN + LOGIN_EXIST_ERROR + LOGIN_ENTER_ERROR
       + LOGIN_USERNAME_ERROR + LOGIN_PASSWORD_ERROR;
 }
 
+// Ввод пароля со "звёздочками"
 std::string EnterPassword() {
   std::string pass;
   char symbol;
@@ -113,6 +134,14 @@ bool Interface::StudentChangeMenu() {
   if(user_answer == MENU_EXIT_ANSWER) {
     return false;
   }
+  system("cls");
+  std::cout << REDACTING_STUDENT;
+  if(!current_database.PrintStudentByIndex(current_user, user_answer - 1)) {
+    std::cout << ERROR;
+    system("pause");
+    return false;
+  }
+  std::cout << '\n';
   if (StudentsAddMenu()) {
     return current_database.DeleteStudent(user_answer - 1, current_user);
   }
@@ -120,7 +149,6 @@ bool Interface::StudentChangeMenu() {
 }
 
 bool Interface::StudentsAddMenu() {
-  system("cls");
   std::cout << MENU_EXIT;
   std::cout << ANOTHER_TO_CONTINUE;
   std::cout << '\n';
@@ -157,11 +185,11 @@ bool Interface::StudentsAddMenu() {
   std::cout << std::setw(ENTER_SPACE) << STUDENTS_ADD_WAGES;
   std::cin >> wages_per_person;
 
-  return current_database.AddStudent(surname,name,
+  return PrintResult(current_database.AddStudent(surname,name,
                                      second_name,group,
                                      average,activity,
                                      wages_per_person,
-                                     current_user);
+                                     current_user));
 }
 
 bool Interface::StudentsDeleteMenu() {
@@ -175,7 +203,17 @@ bool Interface::StudentsDeleteMenu() {
   std::cout << '\n';
   int user_answer;
   std::cin >> user_answer;
-  return current_database.DeleteStudent(user_answer - 1, current_user);
+  if(user_answer == MENU_EXIT_ANSWER) {
+    return false;
+  } else {
+    std::cout << REPEAT_POSITION_TO_DELETE;
+    int rep_answer;
+    std::cin >> rep_answer;
+    if(rep_answer != user_answer) {
+      return false;
+    }
+  }
+  return PrintResult(current_database.DeleteStudent(user_answer - 1, current_user));
 }
 
 bool Interface::StudentsWagesMenu() {
@@ -185,7 +223,48 @@ bool Interface::StudentsWagesMenu() {
   std::cout << "Enter new value: ";
   double new_wages;
   std::cin >> new_wages;
-  return current_database.UpdateMinimalWages(new_wages);
+  return PrintResult(current_database.UpdateMinimalWages(new_wages));
+}
+
+bool Interface::StudentFindMenu() {
+  system("cls");
+  std::cout << MENU_EXIT;
+  std::cout << STUDENTS_SEARCH_NAME;
+  std::cout << STUDENTS_SEARCH_GROUP;
+  char user_answer = getch();
+  std::cout << '\n';
+  if(user_answer == STUDENTS_SEARCH_NAME_ANSWER) {
+    std::string name;
+    std::cout << STUDENTS_SEARCH_ENTER_NAME;
+    std::cin >> name;
+    std::cout << '\n';
+    if(current_database.PrintStudentsByName(std::cout, name)) {
+      std::cout << '\n';
+      system("pause");
+      return true;
+    } else {
+      std::cout << NOT_FOUND;
+    }
+  } else if(user_answer == STUDENTS_SEARCH_GROUP_ANSWER) {
+    std::string group;
+    std::cout << STUDENTS_SEARCH_ENTER_GROUP;
+    std::cin >> group;
+    std::cout << '\n';
+    if(current_database.PrintStudentsByGroup(std::cout, group)) {
+      std::cout << '\n';
+      system("pause");
+      return true;
+    } else {
+      std::cout << NOT_FOUND;
+    }
+  } else if(user_answer == MENU_EXIT_ANSWER) {
+    return true;
+  } else {
+    return false;
+  }
+  std::cout << '\n';
+  system("pause");
+  return false;
 }
 
 bool Interface::StudentsMenu() {
@@ -202,6 +281,7 @@ bool Interface::StudentsMenu() {
     std::cout << MENU_EXIT;
     std::cout << STUDENTS_MENU_SORT;
     std::cout << STUDENTS_MENU_WAGES;
+    std::cout << STUDENTS_MENU_SEARCH;
     if(is_current_admin) {
       std::cout << STUDENTS_MENU_CHANGE;
       std::cout << STUDENTS_MENU_ADD;
@@ -213,12 +293,15 @@ bool Interface::StudentsMenu() {
       StudentsSortMenu();
     } else if (user_answer == STUDENTS_WAGES_ANSWER) {
       StudentsWagesMenu();
+    } else if(user_answer == STUDENTS_SEARCH_ANSWER) {
+      StudentFindMenu();
     } else if (user_answer == MENU_EXIT_ANSWER) {
       break;
     } else if(is_current_admin) {
       if (user_answer == STUDENTS_CHANGE_ANSWER) {
         StudentChangeMenu();
       } else if (user_answer == STUDENTS_ADD_ANSWER) {
+        system("cls");
         StudentsAddMenu();
       } else if (user_answer == STUDENTS_DELETE_ANSWER) {
         StudentsDeleteMenu();
@@ -272,11 +355,20 @@ bool Interface::UsersDeleteMenu() {
   std::cout << '\n';
   int user_answer;
   std::cin >> user_answer;
-  return current_database.DeleteUser(user_answer - 1, current_user);
+  if(user_answer == MENU_EXIT_ANSWER) {
+    return false;
+  } else {
+    std::cout << REPEAT_POSITION_TO_DELETE;
+    int rep_answer;
+    std::cin >> rep_answer;
+    if(rep_answer != user_answer) {
+      return false;
+    }
+  }
+  return PrintResult(current_database.DeleteUser(user_answer - 1, current_user));
 }
 
 bool Interface::UsersAddMenu() {
-  system("cls");
   std::cout << MENU_EXIT;
   std::cout << ANOTHER_TO_CONTINUE;
   std::cout << '\n';
@@ -302,7 +394,7 @@ bool Interface::UsersAddMenu() {
             << " to set error status\n";
   std::cout << USERS_ADD_STATUS;
   std::cin >> status;
-  return current_database.AddUser(username, password, status, current_user);
+  return PrintResult(current_database.AddUser(username, password, status, current_user));
 }
 
 bool Interface::UsersChangeMenu() {
@@ -320,6 +412,14 @@ bool Interface::UsersChangeMenu() {
   if(user_answer == MENU_EXIT_ANSWER) {
     return false;
   }
+  system("cls");
+  std::cout << REDACTING_USER;
+  if(!current_database.PrintUserByIndex(current_user, user_answer - 1)) {
+    std::cout << ERROR;
+    system("pause");
+    return false;
+  }
+  std::cout << '\n';
   if (UsersAddMenu()) {
     return current_database.DeleteUser(user_answer - 1, current_user);
   }
@@ -348,6 +448,7 @@ bool Interface::UsersMenu() {
     } else if (user_answer == USERS_CHANGE_ANSWER) {
       UsersChangeMenu();
     } else if (user_answer == USERS_ADD_ANSWER) {
+      system("cls");
       UsersAddMenu();
     } else if (user_answer == USERS_DELETE_ANSWER) {
       UsersDeleteMenu();
@@ -361,6 +462,7 @@ bool Interface::UsersMenu() {
   return true;
 }
 
+// Основное меню
 bool Interface::MainMenu() {
   char user_answer;
   while (true) {
@@ -374,13 +476,9 @@ bool Interface::MainMenu() {
     if (user_answer == MENU_EXIT_ANSWER) {
       system("cls");
       std::cout << MAIN_MENU_EXIT;
-      std::cout << MAIN_MENU_LOGOUT;
       std::cout << MAIN_MENU_GO_BACK;
       user_answer = getch();
       if (user_answer == MENU_EXIT_ANSWER) {
-        system("cls");
-        return false;
-      } else if (user_answer == MAIN_MENU_LOGOUT_ANSWER) {
         system("cls");
         return true;
       }
@@ -391,4 +489,14 @@ bool Interface::MainMenu() {
       UsersMenu();
     }
   }
+}
+
+bool Interface::PrintResult(bool result) {
+  if(result) {
+    std::cout << SUCCESSFUL;
+  } else {
+    std::cout << ERROR;
+  }
+  system("pause");
+  return result;
 }

@@ -29,6 +29,8 @@ class Database {
   int FindUserAndGetStatus(const User& curr);
   int FindUserAndGetStatus(const std::string& username,
                            const std::string& password);
+  bool PrintHeaderStudentsTable(std::ostream& out, const int SPACE, const std::string& TABLE) const;
+  bool IsUniqueUsername(const std::string& username) const;
  public:
   const int SORT_BY_NAME = 1;
   const int SORT_BY_PRIORITY = 2;
@@ -66,6 +68,10 @@ class Database {
   bool PrintAllUsers(std::ostream& out,
                      User& current_user,
                      const int SPACE);
+  bool PrintUserByIndex(const User& current_user, int index) const;
+  bool PrintStudentByIndex(const User& current_user, int index) const;
+  bool PrintStudentsByName(std::ostream& out, const std::string& name) const;
+  bool PrintStudentsByGroup(std::ostream& out, const std::string& group) const;
   int GetAdminStatus(const User &current_user) const;
   int GetUserStatus(const User &current_user) const;
   int GetErrorStatus(const User &current_user) const;

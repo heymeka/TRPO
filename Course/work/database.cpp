@@ -90,6 +90,7 @@ void WriteString(const std::string& str, FILE*& file) {
   }
 }
 
+// Зашифрованная запись студентов в файл
 bool Database::EncryptDatabaseStudents(const std::string& filename) {
   FILE* fin = fopen(GetStudentsDatabase(filename).c_str(), "wb");
   if (fin == nullptr) {
@@ -294,6 +295,7 @@ Database::Database(Database& second) {
   students = second.students;
 }
 
+// Чтение данных из файлов
 bool Database::OpenDatabase(const std::string& filename) {
   if (!(DecryptDatabaseStudents(filename) &&
       DecryptDatabaseUsers(filename))) {
@@ -339,6 +341,7 @@ bool Database::AddStudent(const std::string& student_surname,
   return true;
 }
 
+// Добавление учётной записи
 bool Database::AddUser(const std::string& new_username,
                        const std::string& new_password,
                        int new_status,
@@ -347,7 +350,7 @@ bool Database::AddUser(const std::string& new_username,
     return false;
   } else {
     User new_user;
-    if (!new_user.CreateUser(new_username, new_password, new_status)) {
+    if (!new_user.CreateUser(new_username, new_password, new_status) || !IsUniqueUsername(new_username)) {
       return false;
     } else {
       users.push_back(new_user);
@@ -357,7 +360,7 @@ bool Database::AddUser(const std::string& new_username,
 }
 
 bool Database::DeleteStudent(int number, User& current_user) {
-  if (current_user.GetStatus() == ADMIN_STATUS && number < students.size()) {
+  if (current_user.GetStatus() == ADMIN_STATUS && number < students.size() && number >= 0) {
     students.erase(students.begin() + number);
     return true;
   } else {
@@ -514,10 +517,82 @@ bool Database::SetStatusToUser(User& current) {
   return status != ERROR_STATUS;
 }
 
-bool Database::PrintAllStudents(std::ostream& out) {
+std::string GetStudentsTableLine(int SPACE) {
+  std::string line = "";
+  const std::string TABLE = "-+-";
+  // Number
+  line = "----" + TABLE;
+  // Name
+  for (int ind = 0; ind < SPACE; ++ind) {
+    line += "-";
+  }
+  // Group
+  // Average
+  for (int col = 0; col < 3; ++col) {
+    for (int ind = 0; ind < SPACE; ++ind) {
+      line += '-';
+    }
+    line += TABLE;
+  }
+  // Activity
+  for (int ind = 0; ind < std::string("ACTIVITY").size(); ++ind) {
+    line += '-';
+  }
+  line += TABLE;
+  // Wages
+  for (int ind = 0; ind < SPACE; ++ind) {
+    line += '-';
+  }
+  line += TABLE;
+  line.pop_back();
+  line += '\n';
+  return line;
+}
+
+bool Database::PrintStudentsByName(std::ostream& out, const std::string& name) const {
   const int NUMBER_SPACE = 4;
   const int SPACE = 16;
   const std::string TABLE = " | ";
+  const std::string ACTIVITY = "Activity";
+  const std::string LINE = GetStudentsTableLine(SPACE);
+  PrintHeaderStudentsTable(out, SPACE, TABLE);
+  int cnt = 0;
+  for (auto& current: students) {
+    if(current.GetFullName().find(name) != std::string::npos)
+      out << std::setw(NUMBER_SPACE) << ++cnt << TABLE
+          << std::setw(2 * SPACE) << current.GetFullName() << TABLE
+          << std::setw(SPACE) << current.GetGroup() << TABLE
+          << std::setw(SPACE) << current.GetAverage() << TABLE
+          << std::setw(ACTIVITY.size()) << current.GetActivity() << TABLE
+          << std::setw(SPACE) << current.GetWagesPerPerson() << TABLE << '\n'
+          << LINE;
+  }
+  return (cnt != 0);
+}
+
+bool Database::PrintStudentsByGroup(std::ostream& out, const std::string& group) const {
+  const int NUMBER_SPACE = 4;
+  const int SPACE = 16;
+  const std::string TABLE = " | ";
+  const std::string ACTIVITY = "Activity";
+  const std::string LINE = GetStudentsTableLine(SPACE);
+  PrintHeaderStudentsTable(out, SPACE, TABLE);
+  int cnt = 0;
+  for (auto& current: students) {
+    if(current.GetGroup().find(group) != std::string::npos)
+      out << std::setw(NUMBER_SPACE) << ++cnt << TABLE
+        << std::setw(2 * SPACE) << current.GetFullName() << TABLE
+        << std::setw(SPACE) << current.GetGroup() << TABLE
+        << std::setw(SPACE) << current.GetAverage() << TABLE
+        << std::setw(ACTIVITY.size()) << current.GetActivity() << TABLE
+        << std::setw(SPACE) << current.GetWagesPerPerson() << TABLE << '\n'
+        << LINE;
+  }
+  return (cnt != 0);
+}
+
+bool Database::PrintHeaderStudentsTable(std::ostream& out, const int SPACE, const std::string& TABLE) const {
+  const int NUMBER_SPACE = 4;
   const std::string NUMBER = "#";
   const std::string FULLNAME = "Full name";
   const std::string GROUP = "Group";
@@ -525,12 +600,24 @@ bool Database::PrintAllStudents(std::ostream& out) {
   const std::string ACTIVITY = "Activity";
   const std::string WAGES = "Wages per person";
   const std::string MINIMAL_WAGES_INFO = "\nMinimal wages: ";
+  const std::string LINE = GetStudentsTableLine(SPACE);
   out << std::setw(NUMBER_SPACE) << NUMBER << TABLE
       << std::setw(2 * SPACE) << FULLNAME << TABLE
       << std::setw(SPACE) << GROUP << TABLE
       << std::setw(SPACE) << AVERAGE << TABLE
       << std::setw(ACTIVITY.size()) << ACTIVITY << TABLE
-      << std::setw(SPACE) << WAGES << TABLE << '\n';
+      << std::setw(SPACE) << WAGES << TABLE << '\n' << LINE;
+  return true;
+}
+
+bool Database::PrintAllStudents(std::ostream& out) {
+  const int NUMBER_SPACE = 4;
+  const int SPACE = 16;
+  const std::string TABLE = " | ";
+  const std::string ACTIVITY = "Activity";
+  const std::string MINIMAL_WAGES_INFO = "\nMinimal wages: ";
+  const std::string LINE = GetStudentsTableLine(SPACE);
+  PrintHeaderStudentsTable(out, SPACE, TABLE);
   int cnt = 0;
   for (auto& current: students) {
     out << std::setw(NUMBER_SPACE) << ++cnt << TABLE
@@ -538,7 +625,8 @@ bool Database::PrintAllStudents(std::ostream& out) {
         << std::setw(SPACE) << current.GetGroup() << TABLE
         << std::setw(SPACE) << current.GetAverage() << TABLE
         << std::setw(ACTIVITY.size()) << current.GetActivity() << TABLE
-        << std::setw(SPACE) << current.GetWagesPerPerson() << TABLE << '\n';
+        << std::setw(SPACE) << current.GetWagesPerPerson() << TABLE << '\n'
+        << LINE;
   }
   std::cout << MINIMAL_WAGES_INFO << MINIMAL_WAGES << "\n";
   return true;
@@ -584,6 +672,32 @@ int Database::GetUserStatus(const User& current_user) const {
 
 int Database::GetErrorStatus(const User& current_user) const {
   return ERROR_STATUS;
+}
+
+bool Database::PrintUserByIndex(const User& current_user, int index) const {
+  if(!IsUserAdmin(current_user) || index >= users.size() || index < 0) {
+    return false;
+  }
+  std::cout << users[index].GetUsername() << ' ' << users[index].GetStatus() << '\n';
+  return true;
+}
+
+bool Database::PrintStudentByIndex(const User& current_user, int index) const {
+  if(!IsUserAdmin(current_user) || index >= students.size() || index < 0) {
+    return false;
+  }
+  const Student &cur = students[index];
+  std::cout << cur.GetFullName() << ' ' << cur.GetGroup() << ' ' << cur.GetAverage() << ' ' << cur.GetActivity() << ' ' << cur.GetWagesPerPerson() << '\n';
+  return true;
+}
+
+bool Database::IsUniqueUsername(const std::string& username) const {
+  for (auto& cur: users) {
+    if(cur.GetUsername() == username) {
+      return false;
+    }
+  }
+  return true;
 }
 
 Database::~Database() {

@@ -36,11 +36,11 @@ class Student {
   std::string GetName();
   std::string GetSurname();
   std::string GetSecondName();
-  std::string GetFullName();
-  std::string GetGroup();
-  bool GetActivity();
-  double GetAverage();
-  double GetWagesPerPerson();
+  std::string GetFullName() const;
+  std::string GetGroup() const;
+  bool GetActivity() const;
+  double GetAverage() const;
+  double GetWagesPerPerson() const;
   bool UpdateSurname(const std::string& new_surname);
   bool UpdateName(const std::string& new_name);
   bool UpdateSecondName(const std::string& new_second_name);
